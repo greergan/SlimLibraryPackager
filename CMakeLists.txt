@@ -57,11 +57,20 @@ project(${SLIM_LIB} VERSION ${GIT_TAG} LANGUAGES CXX)
 set(SLIMLIB_CXX_STANDARD 23)
 
 if(${SLIM_LIB} MATCHES "^SlimCommon")
-    set(SLIM_INCLUDE_DIR "include/slim/common")
-    string(REGEX REPLACE "^slimcommon" "" HEADER_FILE_PREFIX "${SLIM_LIB_LOWER}")
-else(${SLIM_LIB} MATCHES "^Slim")
-    set(SLIM_INCLUDE_DIR "include/slim")
+    string(REGEX REPLACE "^SlimCommon" "" SLIM_COMMON_SUFFIX "${SLIM_LIB}")
+    string(REGEX REPLACE "([A-Z])" "/\\1" SLIM_COMMON_PATH "${SLIM_COMMON_SUFFIX}")
+    string(TOLOWER "${SLIM_COMMON_PATH}" SLIM_COMMON_PATH)
+    string(REGEX REPLACE "^/" "" SLIM_COMMON_PATH "${SLIM_COMMON_PATH}")
+    string(REGEX MATCH "[^/]+$" HEADER_FILE_PREFIX "${SLIM_COMMON_PATH}")
+    string(REGEX REPLACE "/[^/]+$" "" SLIM_COMMON_PARENT "${SLIM_COMMON_PATH}")
+    if(SLIM_COMMON_PARENT STREQUAL SLIM_COMMON_PATH)
+        set(SLIM_INCLUDE_DIR "include/slim/common")
+    else()
+        set(SLIM_INCLUDE_DIR "include/slim/common/${SLIM_COMMON_PARENT}")
+    endif()
+else()
     string(REGEX REPLACE "^slim" "" HEADER_FILE_PREFIX "${SLIM_LIB_LOWER}")
+    set(SLIM_INCLUDE_DIR "include/slim")
 endif()
 set(SLIM_METADATA_FILE_OUT "${SLIM_LIB_LOWER}.pc")
 
@@ -74,7 +83,7 @@ set(H_OUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/${SLIM_INCLUDE_DIR}/${HEADER_FILE_PR
 set(HPP_HEADER_ONLY OFF)
 
 if(EXISTS ${HPP_IN_FILE})
-    set(HPP_HEADER_ONLY)
+    set(HPP_HEADER_ONLY ON)
     set(SLIM_LIB_DESCRIPTION "${SLIM_LIB} header-only C++ library")
     set(SLIM_METADATA_FILE_IN "slim_header_lib.pc.in")
 else()
@@ -148,26 +157,19 @@ add_library(slim_shared SHARED
     ${slimlibrarysrc_SOURCE_DIR}/src/main.cpp
 )
 
+# Fix #1: SOVERSION should be major version only, not full semver
+string(REGEX MATCH "^([0-9]+)" SLIM_VERSION_MAJOR "${GIT_TAG}")
+
 set_target_properties(slim_shared PROPERTIES
     OUTPUT_NAME ${SLIM_LIB_LOWER}
-    VERSION ${GIT_TAG}
-    SOVERSION ${GIT_TAG}
+    VERSION     ${GIT_TAG}
+    SOVERSION   ${SLIM_VERSION_MAJOR}
 )
 
 add_library(slim_static STATIC
     ${slimlibrarysrc_SOURCE_DIR}/src/main.cpp
 )
 set_target_properties(slim_static PROPERTIES OUTPUT_NAME ${SLIM_LIB_LOWER})
-
-if(SLIMVALUE_FOUND)
-    target_include_directories(slim_shared PRIVATE ${SLIMVALUE_INCLUDE_DIRS})
-    target_link_libraries(slim_shared PRIVATE ${SLIMVALUE_LIBRARIES})
-    target_include_directories(slim_static PRIVATE ${SLIMVALUE_INCLUDE_DIRS})
-    target_link_libraries(slim_static PRIVATE ${SLIMVALUE_LIBRARIES})
-    message(STATUS "SlimValue found via pkg-config")
-else()
-    message(FATAL_ERROR "SlimValue not found via pkg-config")
-endif()
 
 foreach(t slim_shared slim_static)
     target_include_directories(${t}
@@ -190,26 +192,6 @@ add_custom_command(TARGET slim_static POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E echo "Static lib: $<TARGET_FILE_NAME:slim_static>"
 )
 
-if(NOT SHARED_OUT)
-    set(SHARED_OUT "${CMAKE_BINARY_DIR}/lib${SLIM_LIB_LOWER}.so.${GIT_TAG}")
-endif()
-
-if(NOT STATIC_OUT)
-    set(STATIC_OUT "${CMAKE_BINARY_DIR}/lib${SLIM_LIB_LOWER}.a")
-endif()
-
-if(EXISTS "${SHARED_OUT}")
-    message(STATUS "Shared lib: ${SHARED_OUT}")
-else()
-    message(STATUS "Shared lib missing: lib${SLIM_LIB_LOWER}.so.${GIT_TAG}")
-endif()
-
-if(EXISTS "${STATIC_OUT}")
-    message(STATUS "Static lib: ${STATIC_OUT}")
-else()
-    message(STATUS "Static lib missing: lib${SLIM_LIB_LOWER}.a")
-endif()
-
 set(TEST_CPP "${CMAKE_CURRENT_SOURCE_DIR}/src/test.cpp")
 
 if(EXISTS "${TEST_CPP}")
@@ -217,6 +199,7 @@ if(EXISTS "${TEST_CPP}")
     target_link_libraries(slim_test PRIVATE slim_shared)
     message(STATUS "Testing: with src/test.cpp")
     add_custom_command(TARGET slim_test POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E echo "Running slim_test..."
         COMMAND slim_test
         COMMENT "Running slim_test"
     )
@@ -225,11 +208,11 @@ endif()
 set(SLIM_BUILD_TESTS OFF)
 if(EXISTS "${slimlibrarysrc_SOURCE_DIR}/tests")
     set(SLIM_BUILD_TESTS ON)
-    message(STATUS "Cathc2 Testing: enabled")
+    message(STATUS "Catch2 Testing: enabled")
 else()
     set(SLIM_BUILD_TESTS OFF)
-    message(STATUS "Cathc2 Testing: disabled")
-    message(STATUS "Cathc2 Testing: no tests directory found")
+    message(STATUS "Catch2 Testing: disabled")
+    message(STATUS "Catch2 Testing: no tests directory found")
 endif()
 
 if(SLIM_BUILD_TESTS)
@@ -254,6 +237,12 @@ if(SLIM_BUILD_TESTS)
     include(CTest)
     include(Catch)
     catch_discover_tests(slim_tests)
+
+    add_custom_command(TARGET slim_tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E echo "Running slim_tests..."
+        COMMAND slim_tests
+        COMMENT "Running slim_tests"
+    )
 endif()
 
 install(TARGETS slim_shared slim_static
@@ -263,10 +252,12 @@ install(TARGETS slim_shared slim_static
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+string(REGEX REPLACE "^include/" "" SLIM_INSTALL_DIR "${SLIM_INCLUDE_DIR}")
+
 if(HPP_HEADER_ONLY)
-    install(FILES "${HPP_OUT_FILE}" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slim)
+    install(FILES "${HPP_OUT_FILE}" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${SLIM_INSTALL_DIR})
 else()
-    install(FILES "${H_OUT_FILE}" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/slim)
+    install(FILES "${H_OUT_FILE}" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${SLIM_INSTALL_DIR})
 endif()
 
 install(EXPORT SlimTargets

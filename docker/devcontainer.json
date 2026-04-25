@@ -1,0 +1,8 @@
+{
+	"image": "greergan/slim-toolchain:latest",
+	"dockerFile": "Dockerfile",
+	"mounts": [
+		"source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+	],
+	"workspaceFolder": "/workspace"
+}

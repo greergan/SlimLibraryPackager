@@ -139,6 +139,49 @@ if(HPP_HEADER_ONLY)
     message(STATUS ".hpp.in file: ${HPP_IN_FILE}")
     message(STATUS ".hpp file: ${HPP_OUT_FILE}")
 endif()
+# Compiler flags
+set(SLIM_CXX_FLAGS "")
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    list(APPEND SLIM_CXX_FLAGS
+        -std=c++${SLIMLIB_CXX_STANDARD}
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wshadow
+        -Wconversion
+        -Wsign-conversion
+    )
+    if(CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+        list(APPEND SLIM_CXX_FLAGS -O2 -DNDEBUG)
+    elseif(CMAKE_BUILD_TYPE STREQUAL "COMPACT")
+        list(APPEND SLIM_CXX_FLAGS -O3)
+    elseif(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+        list(APPEND SLIM_CXX_FLAGS -g -O0)
+    endif()
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    list(APPEND SLIM_CXX_FLAGS
+        /std:c++${SLIMLIB_CXX_STANDARD}
+        /W4
+        /WX-
+        /permissive-
+    )
+    if(CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+        list(APPEND SLIM_CXX_FLAGS /O2 /DNDEBUG)
+    elseif(CMAKE_BUILD_TYPE STREQUAL "COMPACT")
+        list(APPEND SLIM_CXX_FLAGS /O1 /DNDEBUG)
+    elseif(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+        list(APPEND SLIM_CXX_FLAGS /Od /Zi)
+    endif()
+else()
+    message(WARNING "Unknown compiler '${CMAKE_CXX_COMPILER_ID}' — no flags set")
+endif()
+
+list(JOIN SLIM_CXX_FLAGS " " SLIM_CXX_FLAGS_STR)
+message(STATUS "Compiler:      ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "CXX standard:  C++${SLIMLIB_CXX_STANDARD}")
+message(STATUS "Build type:    ${CMAKE_BUILD_TYPE}")
+message(STATUS "CXX flags:     ${SLIM_CXX_FLAGS_STR}")
 message(STATUS "version tag: ${GIT_TAG}")
 message(STATUS "version hash: ${SLIMLIB_GIT_HASH}")
 message(STATUS "full version: ${SLIMLIB_VERSION_FULL}")
@@ -152,6 +195,8 @@ if(HPP_HEADER_ONLY)
 else()
     configure_file("${H_IN_FILE}" "${H_OUT_FILE}" @ONLY)
 endif()
+
+if(NOT HPP_HEADER_ONLY)
 
 add_library(slim_shared SHARED
     ${slimlibrarysrc_SOURCE_DIR}/src/main.cpp
@@ -178,8 +223,9 @@ foreach(t slim_shared slim_static)
             $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
             $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     )
-
-    target_compile_features(${t} PUBLIC cxx_std_23)
+    target_compile_options(${t} PUBLIC ${SLIM_CXX_FLAGS})
+    # Keep this so consumers inherit the standard requirement via CMake's feature system
+    target_compile_features(${t} PUBLIC cxx_std_${SLIMLIB_CXX_STANDARD})
 endforeach()
 
 add_library(slim ALIAS slim_shared)
@@ -192,30 +238,46 @@ add_custom_command(TARGET slim_static POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E echo "Static lib: $<TARGET_FILE_NAME:slim_static>"
 )
 
+install(TARGETS slim_shared slim_static
+    EXPORT SlimTargets
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+endif() # NOT HPP_HEADER_ONLY
+
+# Branch 1: src/test.cpp — always compiled when present
 set(TEST_CPP "${CMAKE_CURRENT_SOURCE_DIR}/src/test.cpp")
 
 if(EXISTS "${TEST_CPP}")
     add_executable(slim_test "${TEST_CPP}")
-    target_link_libraries(slim_test PRIVATE slim_shared)
+    target_compile_options(slim_test PRIVATE ${SLIM_CXX_FLAGS})
+    if(HPP_HEADER_ONLY)
+        target_include_directories(slim_test
+            PRIVATE
+                $<BUILD_INTERFACE:${slimlibrarysrc_SOURCE_DIR}/include>
+                $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+        )
+    else()
+        target_link_libraries(slim_test PRIVATE slim_shared)
+    endif()
     message(STATUS "Testing: with src/test.cpp")
     add_custom_command(TARGET slim_test POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E echo "Running slim_test..."
-        COMMAND slim_test
+        COMMAND $<TARGET_FILE:slim_test>
         COMMENT "Running slim_test"
     )
-endif()
-
-set(SLIM_BUILD_TESTS OFF)
-if(EXISTS "${slimlibrarysrc_SOURCE_DIR}/tests")
-    set(SLIM_BUILD_TESTS ON)
-    message(STATUS "Catch2 Testing: enabled")
 else()
-    set(SLIM_BUILD_TESTS OFF)
-    message(STATUS "Catch2 Testing: disabled")
-    message(STATUS "Catch2 Testing: no tests directory found")
+    message(STATUS "Testing: src/test.cpp not found, skipping")
 endif()
 
-if(SLIM_BUILD_TESTS)
+# Branch 2: tests/ directory — Catch2, always checked
+if(EXISTS "${slimlibrarysrc_SOURCE_DIR}/tests")
+    message(STATUS "Catch2 Testing: enabled")
+
+    file(GLOB_RECURSE SLIM_TEST_SOURCES "${slimlibrarysrc_SOURCE_DIR}/tests/*.cpp")
+
     FetchContent_Declare(
         Catch2
         GIT_REPOSITORY https://github.com/catchorg/Catch2.git
@@ -226,13 +288,19 @@ if(SLIM_BUILD_TESTS)
 
     enable_testing()
 
-    add_executable(slim_tests
-        ${slimlibrarysrc_SOURCE_DIR}/tests/main.cpp
-    )
+    add_executable(slim_tests ${SLIM_TEST_SOURCES})
+    target_compile_options(slim_tests PRIVATE ${SLIM_CXX_FLAGS})
+    if(HPP_HEADER_ONLY)
+        target_include_directories(slim_tests
+            PRIVATE
+                $<BUILD_INTERFACE:${slimlibrarysrc_SOURCE_DIR}/include>
+                $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+        )
+    else()
+        target_link_libraries(slim_tests PRIVATE slim)
+    endif()
 
-    target_link_libraries(slim_tests
-        PRIVATE slim Catch2::Catch2WithMain
-    )
+    target_link_libraries(slim_tests PRIVATE Catch2::Catch2WithMain)
 
     include(CTest)
     include(Catch)
@@ -240,17 +308,12 @@ if(SLIM_BUILD_TESTS)
 
     add_custom_command(TARGET slim_tests POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E echo "Running slim_tests..."
-        COMMAND slim_tests
+        COMMAND $<TARGET_FILE:slim_tests>
         COMMENT "Running slim_tests"
     )
+else()
+    message(STATUS "Catch2 Testing: disabled (no tests directory found)")
 endif()
-
-install(TARGETS slim_shared slim_static
-    EXPORT SlimTargets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
 
 string(REGEX REPLACE "^include/" "" SLIM_INSTALL_DIR "${SLIM_INCLUDE_DIR}")
 
@@ -260,26 +323,28 @@ else()
     install(FILES "${H_OUT_FILE}" DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${SLIM_INSTALL_DIR})
 endif()
 
-install(EXPORT SlimTargets
-    FILE SlimTargets.cmake
-    NAMESPACE Slim::
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${SLIM_LIB}
-)
+if(NOT HPP_HEADER_ONLY)
+    install(EXPORT SlimTargets
+        FILE SlimTargets.cmake
+        NAMESPACE Slim::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${SLIM_LIB}
+    )
 
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/${SLIM_LIB}ConfigVersion.cmake"
-    VERSION ${GIT_TAG}
-    COMPATIBILITY AnyNewerVersion
-)
+    write_basic_package_version_file(
+        "${CMAKE_CURRENT_BINARY_DIR}/${SLIM_LIB}ConfigVersion.cmake"
+        VERSION ${GIT_TAG}
+        COMPATIBILITY AnyNewerVersion
+    )
 
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/${SLIM_LIB}Config.cmake"
+    file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/${SLIM_LIB}Config.cmake"
 "include(\"\${CMAKE_CURRENT_LIST_DIR}/SlimTargets.cmake\")\n")
 
-install(FILES
-    "${CMAKE_CURRENT_BINARY_DIR}/${SLIM_LIB}Config.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/${SLIM_LIB}ConfigVersion.cmake"
-    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${SLIM_LIB}
-)
+    install(FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/${SLIM_LIB}Config.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/${SLIM_LIB}ConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${SLIM_LIB}
+    )
+endif()
 
 configure_file(
     "${slimlibrarysrc_SOURCE_DIR}/${SLIM_METADATA_FILE_IN}"

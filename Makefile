@@ -3,6 +3,7 @@ INSTALL_PREFIX ?= /usr
 CMAKE := cmake
 DIST_DIR ?= .
 LOCAL_SRC ?= ON;
+RELEASE_TYPE ?= DEBUG
 
 IS_DEBIAN := $(shell test -f /etc/debian_version && echo "yes")
 IS_REDHAT := $(shell test -f /etc/redhat-release && echo "yes")
@@ -30,7 +31,7 @@ all: build
 
 configure:
 	$(CMAKE) -S . -B $(BUILD_DIR) \
-		-DCMAKE_BUILD_TYPE=Release \
+		-DCMAKE_BUILD_TYPE=$(RELEASE_TYPE) \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_PREFIX) \
 		-DCPACK_OUTPUT_FILE_PREFIX=$(DIST_DIR) \
 		-DSLIM_USE_LOCAL_SOURCE=$(LOCAL_SRC)
@@ -38,6 +39,7 @@ configure:
 build: configure
 	$(CMAKE) --build $(BUILD_DIR)
 
+install:
 install:
 	@if [ "$(IS_DEBIAN)" = "yes" ]; then \
 		$(MAKE) deb; \
@@ -64,13 +66,17 @@ install:
 		exit 1; \
 	fi;
 
-deb: build
+test: build
+	cd $(BUILD_DIR) && ctest --output-on-failure --verbose
+	$(BUILD_DIR)/slim_tests
+
+deb: build test
 	cd $(BUILD_DIR) && cpack -G DEB
 
-rpm: build
+rpm: build test
 	cd $(BUILD_DIR) && cpack -G RPM
 
-packages:
+packages: test
 	cd $(BUILD_DIR) && for f in DEB RPM; do cpack -G $$f; done
 
 clean:

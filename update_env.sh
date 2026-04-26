@@ -27,18 +27,21 @@ WORD_COUNT=${#WORDS[@]}
 
 if [[ ${WORD_COUNT} -eq 1 ]]; then
     HEADER_DIR="${DEST_DIR}/include/slim"
-    HEADER_FILE="${DIR_NAME}.hpp"
+    HEADER_FILE="${DIR_NAME}.hpp.in"
+    INCLUDE_FILE="${DIR_NAME}.hpp"
 elif [[ ${WORD_COUNT} -eq 2 ]]; then
     SUBDIR="$(echo "${WORDS[0]}" | tr '[:upper:]' '[:lower:]')"
-    FILENAME="$(echo "${WORDS[1]}" | tr '[:upper:]' '[:lower:]').h"
+    BASENAME="$(echo "${WORDS[1]}" | tr '[:upper:]' '[:lower:]')"
     HEADER_DIR="${DEST_DIR}/include/slim/${SUBDIR}"
-    HEADER_FILE="${FILENAME}"
+    HEADER_FILE="${BASENAME}.h.in"
+    INCLUDE_FILE="${BASENAME}.h"
 elif [[ ${WORD_COUNT} -eq 3 ]]; then
     SUBDIR="$(echo "${WORDS[0]}" | tr '[:upper:]' '[:lower:]')"
     SUBDIR2="$(echo "${WORDS[1]}" | tr '[:upper:]' '[:lower:]')"
-    FILENAME="$(echo "${WORDS[2]}" | tr '[:upper:]' '[:lower:]').h"
+    BASENAME="$(echo "${WORDS[2]}" | tr '[:upper:]' '[:lower:]')"
     HEADER_DIR="${DEST_DIR}/include/slim/${SUBDIR}/${SUBDIR2}"
-    HEADER_FILE="${FILENAME}"
+    HEADER_FILE="${BASENAME}.h.in"
+    INCLUDE_FILE="${BASENAME}.h"
 else
     echo -e "${RED}Error: Directory '${DIR_NAME}' has an unsupported format. Expected 'Slim' + 1, 2, or 3 words.${NC}"
     exit 1
@@ -124,7 +127,8 @@ for word in "${ALL_WORDS[@]}"; do
 done
 HEADER_GUARD="${HEADER_GUARD}__$(echo "${EXTENSION}" | tr '[:lower:]' '[:upper:]')"
 HEADER_PATH="${HEADER_DIR}/${HEADER_FILE}"
-INCLUDE_PATH="slim/${HEADER_PATH#${DEST_DIR}/include/slim/}"
+INCLUDE_PATH="slim/${HEADER_DIR#${DEST_DIR}/include/slim/}/${INCLUDE_FILE}"
+INCLUDE_PATH="${INCLUDE_PATH//\/\//\/}"
 
 # Create include/slim header file
 echo ""

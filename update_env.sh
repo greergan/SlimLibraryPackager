@@ -5,12 +5,44 @@ BRANCH="master"
 RAW_BASE="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 API_BASE="https://api.github.com/repos/${REPO}/git/trees/${BRANCH}?recursive=1"
 DEST_DIR="$(pwd)"
+DIR_NAME="$(basename "${DEST_DIR}")"
 
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
+
+# Validate directory name starts with Slim
+if [[ ! "${DIR_NAME}" =~ ^Slim ]]; then
+    echo -e "${RED}Error: Directory '${DIR_NAME}' does not begin with 'Slim'. Aborting.${NC}"
+    exit 1
+fi
+
+# Parse words after Slim using camel case splitting
+AFTER_SLIM="${DIR_NAME#Slim}"
+# Split CamelCase into words
+WORDS=($(echo "${AFTER_SLIM}" | sed 's/\([A-Z]\)/ \1/g' | xargs -n1))
+WORD_COUNT=${#WORDS[@]}
+
+if [[ ${WORD_COUNT} -eq 1 ]]; then
+    HEADER_DIR="${DEST_DIR}/include/slim"
+    HEADER_FILE="${DIR_NAME}.hpp"
+elif [[ ${WORD_COUNT} -eq 2 ]]; then
+    SUBDIR="$(echo "${WORDS[0]}" | tr '[:upper:]' '[:lower:]')"
+    FILENAME="$(echo "${WORDS[1]}" | tr '[:upper:]' '[:lower:]').h"
+    HEADER_DIR="${DEST_DIR}/include/slim/${SUBDIR}"
+    HEADER_FILE="${FILENAME}"
+elif [[ ${WORD_COUNT} -eq 3 ]]; then
+    SUBDIR="$(echo "${WORDS[0]}" | tr '[:upper:]' '[:lower:]')"
+    SUBDIR2="$(echo "${WORDS[1]}" | tr '[:upper:]' '[:lower:]')"
+    FILENAME="$(echo "${WORDS[2]}" | tr '[:upper:]' '[:lower:]').h"
+    HEADER_DIR="${DEST_DIR}/include/slim/${SUBDIR}/${SUBDIR2}"
+    HEADER_FILE="${FILENAME}"
+else
+    echo -e "${RED}Error: Directory '${DIR_NAME}' has an unsupported format. Expected 'Slim' + 1, 2, or 3 words.${NC}"
+    exit 1
+fi
 
 download_file() {
     local relative_path="$1"
@@ -100,6 +132,23 @@ for tu in main.cpp test.cpp; do
         echo -e "  ${RED}Skipped:${NC} src/${tu} (already exists)"
     fi
 done
+
+# Create include/slim header file
+echo ""
+if [[ ! -d "${HEADER_DIR}" ]]; then
+    mkdir -p "${HEADER_DIR}"
+    echo -e "  ${GREEN}Created:${NC} ${HEADER_DIR#${DEST_DIR}/}/"
+else
+    echo -e "  ${RED}Skipped:${NC} ${HEADER_DIR#${DEST_DIR}/}/ (already exists)"
+fi
+
+HEADER_PATH="${HEADER_DIR}/${HEADER_FILE}"
+if [[ ! -e "${HEADER_PATH}" ]]; then
+    touch "${HEADER_PATH}"
+    echo -e "  ${GREEN}Created:${NC} ${HEADER_PATH#${DEST_DIR}/}"
+else
+    echo -e "  ${RED}Skipped:${NC} ${HEADER_PATH#${DEST_DIR}/} (already exists)"
+fi
 
 echo ""
 echo -e "${GREEN}Done.${NC}"

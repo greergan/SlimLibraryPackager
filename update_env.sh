@@ -26,9 +26,11 @@ WORDS=($(echo "${AFTER_SLIM}" | sed 's/\([A-Z]\)/ \1/g' | xargs -n1))
 WORD_COUNT=${#WORDS[@]}
 
 if [[ ${WORD_COUNT} -eq 1 ]]; then
-    HEADER_DIR="${DEST_DIR}/include/slim"
-    HEADER_FILE="${DIR_NAME}.hpp.in"
-    INCLUDE_FILE="${DIR_NAME}.hpp"
+    if [[ ${DIR_NAME} -ne "SlimCommon" ]]; then
+        HEADER_DIR="${DEST_DIR}/include/slim"
+        HEADER_FILE="${DIR_NAME}.hpp.in"
+        INCLUDE_FILE="${DIR_NAME}.hpp"
+    fi
 elif [[ ${WORD_COUNT} -eq 2 ]]; then
     SUBDIR="$(echo "${WORDS[0]}" | tr '[:upper:]' '[:lower:]')"
     BASENAME="$(echo "${WORDS[1]}" | tr '[:upper:]' '[:lower:]')"
@@ -48,7 +50,7 @@ else
 fi
 
 # Determine pc.in filename based on word count
-if [[ ${WORD_COUNT} -eq 1 ]]; then
+if [[ ${WORD_COUNT} -eq 1 && ${DIR_NAME} -ne "SlimCommon" ]]; then
     PC_FILE="slim_header_lib.pc.in"
 else
     PC_FILE="slim_common_lib.pc.in"

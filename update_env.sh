@@ -153,7 +153,7 @@ fi
 
 # Build header guard from directory name words
 ALL_WORDS=("Slim" "${WORDS[@]}")
-EXTENSION="${HEADER_FILE##*.}"
+EXTENSION="${INCLUDE_FILE##*.}"
 HEADER_GUARD=""
 for word in "${ALL_WORDS[@]}"; do
     [[ -n "${HEADER_GUARD}" ]] && HEADER_GUARD="${HEADER_GUARD}__"

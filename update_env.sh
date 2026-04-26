@@ -114,26 +114,6 @@ else
     done <<< "${cmake_files}"
 fi
 
-# Create src directory and empty TU files if not already present
-echo ""
-if [[ ! -d "${DEST_DIR}/src" ]]; then
-    mkdir -p "${DEST_DIR}/src"
-    echo -e "  ${GREEN}Created:${NC} src/"
-else
-    echo -e "  ${RED}Skipped:${NC} src/ (already exists)"
-fi
-
-INCLUDE_PATH="${HEADER_PATH#${DEST_DIR}/include/}"
-for tu in main.cpp test.cpp; do
-    tu_path="${DEST_DIR}/src/${tu}"
-    if [[ ! -e "${tu_path}" ]]; then
-        echo "#include <${INCLUDE_PATH}>" > "${tu_path}"
-        echo -e "  ${GREEN}Created:${NC} src/${tu}"
-    else
-        echo -e "  ${RED}Skipped:${NC} src/${tu} (already exists)"
-    fi
-done
-
 # Build header guard from directory name words
 ALL_WORDS=("Slim" "${WORDS[@]}")
 EXTENSION="${HEADER_FILE##*.}"
@@ -143,6 +123,8 @@ for word in "${ALL_WORDS[@]}"; do
 done
 GUARD_PARTS+=("$(echo "${EXTENSION}" | tr '[:lower:]' '[:upper:]')")
 HEADER_GUARD="$(IFS='__'; echo "${GUARD_PARTS[*]}")"
+HEADER_PATH="${HEADER_DIR}/${HEADER_FILE}"
+INCLUDE_PATH="${HEADER_PATH#${DEST_DIR}/include/}"
 
 # Create include/slim header file
 echo ""
@@ -153,7 +135,6 @@ else
     echo -e "  ${RED}Skipped:${NC} ${HEADER_DIR#${DEST_DIR}/}/ (already exists)"
 fi
 
-HEADER_PATH="${HEADER_DIR}/${HEADER_FILE}"
 if [[ ! -e "${HEADER_PATH}" ]]; then
     cat > "${HEADER_PATH}" << EOF
 #pragma once
@@ -166,6 +147,25 @@ EOF
 else
     echo -e "  ${RED}Skipped:${NC} ${HEADER_PATH#${DEST_DIR}/} (already exists)"
 fi
+
+# Create src directory and TU files
+echo ""
+if [[ ! -d "${DEST_DIR}/src" ]]; then
+    mkdir -p "${DEST_DIR}/src"
+    echo -e "  ${GREEN}Created:${NC} src/"
+else
+    echo -e "  ${RED}Skipped:${NC} src/ (already exists)"
+fi
+
+for tu in main.cpp test.cpp; do
+    tu_path="${DEST_DIR}/src/${tu}"
+    if [[ ! -e "${tu_path}" ]]; then
+        echo "#include <${INCLUDE_PATH}>" > "${tu_path}"
+        echo -e "  ${GREEN}Created:${NC} src/${tu}"
+    else
+        echo -e "  ${RED}Skipped:${NC} src/${tu} (already exists)"
+    fi
+done
 
 echo ""
 echo -e "${GREEN}Done.${NC}"

@@ -202,7 +202,7 @@ for tu in main.cpp test.cpp; do
             cat > "${tu_path}" << EOF
 #include <${INCLUDE_PATH}>
 
-int main(int argc, char* argv[]) {
+int main() {
 
     return 0;
 }

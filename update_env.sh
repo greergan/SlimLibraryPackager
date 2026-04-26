@@ -44,6 +44,17 @@ for file in CMakeLists.txt Makefile; do
     download_file "${file}"
 done
 
+# Download required_packages only if not already present
+if [[ ! -e "${DEST_DIR}/required_packages" ]]; then
+    if curl -fsSL "${RAW_BASE}/required_packages" -o "${DEST_DIR}/required_packages"; then
+        echo -e "  ${GREEN}Downloaded:${NC} required_packages"
+    else
+        echo -e "  ${RED}Failed:${NC} required_packages"
+    fi
+else
+    echo -e "  ${RED}Skipped:${NC} required_packages (already exists)"
+fi
+
 # Discover and download cmake/ directory recursively via GitHub API
 echo ""
 echo "Fetching cmake/ directory listing from GitHub..."
@@ -54,26 +65,20 @@ if [[ $? -ne 0 ]]; then
     exit 1
 fi
 
-cmake_files="$(echo "${api_response}" | grep '"path"' | grep -o '"cmake/[^"]*"' | tr -d '"')"
+cmake_files="$(echo "${api_response}" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for item in data.get('tree', []):
+    if item['path'].startswith('cmake/') and item['type'] == 'blob':
+        print(item['path'])
+" 2>/dev/null)"
 
 if [[ -z "${cmake_files}" ]]; then
     echo -e "${YELLOW}Warning: No files found under cmake/ in ${REPO}@${BRANCH}.${NC}"
 else
     echo ""
     while IFS= read -r cmake_file; do
-        # Skip directory entries (no extension and not a known file type — API includes both blobs and trees)
-        # Only download blobs; trees will be created by mkdir -p in download_file
-        if echo "${api_response}" | grep -q "\"${cmake_file}\"" && \
-           echo "${api_response}" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-for item in data.get('tree', []):
-    if item['path'] == '${cmake_file}' and item['type'] == 'blob':
-        print('blob')
-        break
-" 2>/dev/null | grep -q blob; then
-            download_file "${cmake_file}"
-        fi
+        download_file "${cmake_file}"
     done <<< "${cmake_files}"
 fi
 

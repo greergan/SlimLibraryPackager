@@ -161,8 +161,13 @@ for word in "${ALL_WORDS[@]}"; do
 done
 HEADER_GUARD="${HEADER_GUARD}__$(echo "${EXTENSION}" | tr '[:lower:]' '[:upper:]')"
 HEADER_PATH="${HEADER_DIR}/${HEADER_FILE}"
-INCLUDE_PATH="slim/${HEADER_DIR#${DEST_DIR}/include/slim/}/${INCLUDE_FILE}"
-INCLUDE_PATH="${INCLUDE_PATH//\/\//\/}"
+if [[ ${WORD_COUNT} -eq 1 ]]; then
+    INCLUDE_PATH="slim/${INCLUDE_FILE}"
+elif [[ ${WORD_COUNT} -eq 2 ]]; then
+    INCLUDE_PATH="slim/${SUBDIR}/${INCLUDE_FILE}"
+elif [[ ${WORD_COUNT} -eq 3 ]]; then
+    INCLUDE_PATH="slim/${SUBDIR}/${SUBDIR2}/${INCLUDE_FILE}"
+fi
 
 # Create include/slim header file
 echo ""

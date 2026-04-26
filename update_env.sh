@@ -164,7 +164,18 @@ fi
 for tu in main.cpp test.cpp; do
     tu_path="${DEST_DIR}/src/${tu}"
     if [[ ! -e "${tu_path}" ]]; then
-        echo "#include <${INCLUDE_PATH}>" > "${tu_path}"
+        if [[ "${tu}" == "test.cpp" ]]; then
+            cat > "${tu_path}" << EOF
+#include <${INCLUDE_PATH}>
+
+int main(int argc, char* argv[]) {
+
+    return 0;
+}
+EOF
+        else
+            echo "#include <${INCLUDE_PATH}>" > "${tu_path}"
+        fi
         echo -e "  ${GREEN}Created:${NC} src/${tu}"
     else
         echo -e "  ${RED}Skipped:${NC} src/${tu} (already exists)"

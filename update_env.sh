@@ -221,6 +221,80 @@ EOF
     fi
 done
 
+# Git repository setup
+echo ""
+if [[ ! -d "${DEST_DIR}/.git" ]]; then
+    git -C "${DEST_DIR}" init
+    echo -e "  ${GREEN}Initialized:${NC} git repository"
+
+    # Create standard CMake .gitignore
+    cat > "${DEST_DIR}/.gitignore" << EOF
+# CMake
+CMakeLists.txt.user
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Testing/
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+CMakeUserPresets.json
+build*/
+
+# IDE
+.idea/
+.vscode/
+.vs/
+.cache/
+cmake-build-*/
+
+# OS
+.DS_Store
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.deb
+*.rpm
+
+# Downloaded files
+CMakeLists.txt
+Makefile
+cmake/
+${PC_FILE}
+EOF
+    echo -e "  ${GREEN}Created:${NC} .gitignore"
+
+    # Prompt for remote URL, retry until provided
+    while true; do
+        echo -en "${YELLOW}Enter remote URL: ${NC}"
+        read -r remote_url < /dev/tty
+        if [[ -n "${remote_url}" ]]; then
+            break
+        fi
+        echo -e "  ${RED}Error:${NC} Remote URL is required."
+    done
+
+    git -C "${DEST_DIR}" remote add origin "${remote_url}"
+    echo -e "  ${GREEN}Remote added:${NC} ${remote_url}"
+
+    # Stage specific files and make initial commit
+    git -C "${DEST_DIR}" add src/ include/ "${PC_FILE}" required_packages .gitignore 2>/dev/null
+    git -C "${DEST_DIR}" commit -m "Initial commit: scaffold ${DIR_NAME} library environment"
+    echo -e "  ${GREEN}Committed:${NC} initial library scaffold"
+
+    git -C "${DEST_DIR}" push -u origin HEAD
+    echo -e "  ${GREEN}Pushed:${NC} initial commit to ${remote_url}"
+else
+    echo -e "  ${YELLOW}Skipped:${NC} git repository already exists"
+fi
+
 echo ""
 echo -e "${GREEN}Done.${NC}"
 echo ""

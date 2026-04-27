@@ -1,7 +1,8 @@
 set(_EMPTY_SENTINEL "__EMPTY__")
+set(_SLIM_GIT_BASE "https://github.com/greergan")
 
 # ---------------------------------------------------------------------------
-# meta_create(<PREFIX> <NAME> key1 value1 key2 value2 ...)
+# meta_create(<PREFIX> <n> key1 value1 key2 value2 ...)
 # ---------------------------------------------------------------------------
 function(meta_create PREFIX NAME)
     set(_fields "")
@@ -33,7 +34,7 @@ function(meta_create PREFIX NAME)
 endfunction()
 
 # ---------------------------------------------------------------------------
-# meta_get(<PREFIX> <NAME> <KEY> <OUT_VAR>)
+# meta_get(<PREFIX> <n> <KEY> <OUT_VAR>)
 # ---------------------------------------------------------------------------
 function(meta_get PREFIX NAME KEY OUT_VAR)
     set(VAR "${PREFIX}_${NAME}_${KEY}")
@@ -49,7 +50,7 @@ function(meta_get PREFIX NAME KEY OUT_VAR)
 endfunction()
 
 # ---------------------------------------------------------------------------
-# _derive_module_type(<NAME> <OUT_TYPE>)  [internal]
+# _derive_module_type(<n> <OUT_TYPE>)  [internal]
 # ---------------------------------------------------------------------------
 function(_derive_module_type NAME OUT_TYPE)
     if("${NAME}" STREQUAL "SlimCommon")
@@ -83,7 +84,7 @@ function(_derive_module_type NAME OUT_TYPE)
 endfunction()
 
 # ---------------------------------------------------------------------------
-# _store_pkgconfig_info(<NAME> <PKG_NAME>)  [internal]
+# _store_pkgconfig_info(<n> <PKG_NAME>)  [internal]
 # ---------------------------------------------------------------------------
 function(_store_pkgconfig_info NAME PKG_NAME)
     foreach(KEY IN ITEMS CFLAGS LDFLAGS LIBRARIES INCLUDE_DIRS LIBRARY_DIRS VERSION)
@@ -94,8 +95,8 @@ function(_store_pkgconfig_info NAME PKG_NAME)
         set(MODULE_${NAME}_pkg_${KEY} "${_val}" PARENT_SCOPE)
     endforeach()
 
-    # use the explicitly fetched version from pkg_get_variable
     # pkg_check_modules does not reliably populate VERSION
+    # use the version fetched via pkg-config --modversion instead
     set(_found "${${NAME}_RESOLVED_VERSION}")
     if("${_found}" STREQUAL "")
         set(_found "${_EMPTY_SENTINEL}")
@@ -105,7 +106,7 @@ function(_store_pkgconfig_info NAME PKG_NAME)
 endfunction()
 
 # ---------------------------------------------------------------------------
-# _check_module(<NAME> <MIN_VERSION> <MAX_VERSION>)  [internal]
+# _check_module(<n> <MIN_VERSION> <MAX_VERSION>)  [internal]
 # ---------------------------------------------------------------------------
 function(_check_module NAME MIN_VERSION MAX_VERSION)
     find_package(PkgConfig REQUIRED)
@@ -128,19 +129,16 @@ function(_check_module NAME MIN_VERSION MAX_VERSION)
     endif()
 
     # pkg_check_modules does not reliably populate VERSION
-    # fetch it explicitly from the .pc file instead
-    #pkg_get_variable("${NAME}_RESOLVED_VERSION" "${_pkg_name}" "Version")
-	find_program(_PKG_CONFIG_EXEC pkg-config)
-	if(_PKG_CONFIG_EXEC)
-		if(_PKG_CONFIG_EXEC)
-			execute_process(
-				COMMAND "${_PKG_CONFIG_EXEC}" --modversion "${_pkg_name}"
-				OUTPUT_VARIABLE "${NAME}_RESOLVED_VERSION"
-				OUTPUT_STRIP_TRAILING_WHITESPACE
-				ERROR_QUIET
-			)
-		endif()
-	endif()
+    # call pkg-config directly to get the resolved version
+    find_program(_PKG_CONFIG_EXEC pkg-config)
+    if(_PKG_CONFIG_EXEC)
+        execute_process(
+            COMMAND "${_PKG_CONFIG_EXEC}" --modversion "${_pkg_name}"
+            OUTPUT_VARIABLE "${NAME}_RESOLVED_VERSION"
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+    endif()
 
     _store_pkgconfig_info("${NAME}" "${_pkg_name}")
 
@@ -152,15 +150,105 @@ function(_check_module NAME MIN_VERSION MAX_VERSION)
 endfunction()
 
 # ---------------------------------------------------------------------------
+# _check_git_repo(<n>)  [internal]
+# ---------------------------------------------------------------------------
+function(_check_git_repo NAME)
+    meta_get(MODULE "${NAME}" git_repo _repo_url)
+
+    find_program(_CURL_EXEC curl)
+    if(NOT _CURL_EXEC)
+        message(WARNING "_check_git_repo: curl not found, skipping repo check for '${NAME}'")
+        set(MODULE_${NAME}_git_repo_found "OFF" PARENT_SCOPE)
+        return()
+    endif()
+
+    execute_process(
+        COMMAND "${_CURL_EXEC}"
+            --silent
+            --output /dev/null
+            --write-out "%{http_code}"
+            --max-time 5
+            "${_repo_url}"
+        OUTPUT_VARIABLE _http_code
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+
+    if("${_http_code}" EQUAL 301)
+        set(MODULE_${NAME}_git_repo_found "ON" PARENT_SCOPE)
+    else()
+        message(WARNING "_check_git_repo: '${_repo_url}' returned ${_http_code}, expected 301")
+        set(MODULE_${NAME}_git_repo_found "OFF" PARENT_SCOPE)
+    endif()
+endfunction()
+
+# ---------------------------------------------------------------------------
+# _get_git_repo_latest_tag(<n>)  [internal]
+# ---------------------------------------------------------------------------
+function(_get_git_repo_latest_tag NAME)
+    meta_get(MODULE "${NAME}" git_repo_found _repo_found)
+    if(NOT _repo_found)
+        set(MODULE_${NAME}_git_latest_tag "${_EMPTY_SENTINEL}" PARENT_SCOPE)
+        return()
+    endif()
+
+    meta_get(MODULE "${NAME}" git_repo _repo_url)
+
+    find_program(_GIT_EXEC git)
+    if(NOT _GIT_EXEC)
+        message(WARNING "_get_git_repo_latest_tag: git not found, skipping tag fetch for '${NAME}'")
+        set(MODULE_${NAME}_git_latest_tag "${_EMPTY_SENTINEL}" PARENT_SCOPE)
+        return()
+    endif()
+
+    execute_process(
+        COMMAND "${_GIT_EXEC}" ls-remote --tags --sort=-version:refname "${_repo_url}"
+        OUTPUT_VARIABLE _tag_output
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+
+    # extract the first tag name from refs/tags/<tag>
+    string(REGEX MATCH "refs/tags/([^\n^]+)" _tag_match "${_tag_output}")
+    set(_latest_tag "${CMAKE_MATCH_1}")
+
+    if("${_latest_tag}" STREQUAL "")
+        set(_latest_tag "${_EMPTY_SENTINEL}")
+    endif()
+
+    set(MODULE_${NAME}_git_latest_tag "${_latest_tag}" PARENT_SCOPE)
+endfunction()
+
+# ---------------------------------------------------------------------------
+# _propagate_module(<n>)  [internal]
+# ---------------------------------------------------------------------------
+macro(_propagate_module NAME)
+    set(MODULE_NAMES                  "${MODULE_NAMES}"                  PARENT_SCOPE)
+    set(MODULE_${NAME}_FIELDS         "${MODULE_${NAME}_FIELDS}"         PARENT_SCOPE)
+    set(MODULE_${NAME}_git_repo_found "${MODULE_${NAME}_git_repo_found}" PARENT_SCOPE)
+    set(MODULE_${NAME}_git_latest_tag "${MODULE_${NAME}_git_latest_tag}" PARENT_SCOPE)
+    foreach(KEY IN LISTS MODULE_${NAME}_FIELDS)
+        set(MODULE_${NAME}_${KEY}     "${MODULE_${NAME}_${KEY}}"         PARENT_SCOPE)
+    endforeach()
+endmacro()
+
+# ---------------------------------------------------------------------------
 # define_module([NAME] [min_version] [max_version])
 #   No args: derives name from CMAKE_SOURCE_DIR and auto-loads required_packages
 # ---------------------------------------------------------------------------
 function(define_module)
     if(ARGC EQUAL 0)
         cmake_path(GET CMAKE_SOURCE_DIR FILENAME NAME)
-        set(_primary ON)
-        set(_min_version "${_EMPTY_SENTINEL}")
-        set(_max_version "${_EMPTY_SENTINEL}")
+
+        # register the primary module first
+        define_module("${NAME}")
+        _propagate_module("${NAME}")
+
+        _check_git_repo("${NAME}")
+        set(MODULE_${NAME}_git_repo_found "${MODULE_${NAME}_git_repo_found}" PARENT_SCOPE)
+
+        _get_git_repo_latest_tag("${NAME}")
+        set(MODULE_${NAME}_git_latest_tag "${MODULE_${NAME}_git_latest_tag}" PARENT_SCOPE)
 
         # auto-load modules from required_packages
         if(EXISTS "${CMAKE_SOURCE_DIR}/required_packages")
@@ -189,27 +277,23 @@ function(define_module)
                     endif()
 
                     define_module("${_pkg}" "${_pkg_min}" "${_pkg_max}")
-
-                    # propagate what the recursive call registered
-                    set(MODULE_NAMES              "${MODULE_NAMES}"              PARENT_SCOPE)
-                    set(MODULE_${_pkg}_FIELDS     "${MODULE_${_pkg}_FIELDS}"     PARENT_SCOPE)
-                    foreach(KEY IN LISTS MODULE_${_pkg}_FIELDS)
-                        set(MODULE_${_pkg}_${KEY} "${MODULE_${_pkg}_${KEY}}"     PARENT_SCOPE)
-                    endforeach()
+                    _propagate_module("${_pkg}")
 
                     _check_module("${_pkg}" "${_pkg_min}" "${_pkg_max}")
+                    _propagate_module("${_pkg}")
 
-                    # propagate pkg-config info
-                    set(MODULE_${_pkg}_FIELDS     "${MODULE_${_pkg}_FIELDS}"     PARENT_SCOPE)
-                    foreach(KEY IN LISTS MODULE_${_pkg}_FIELDS)
-                        set(MODULE_${_pkg}_${KEY} "${MODULE_${_pkg}_${KEY}}"     PARENT_SCOPE)
-                    endforeach()
+                    _check_git_repo("${_pkg}")
+                    set(MODULE_${_pkg}_git_repo_found "${MODULE_${_pkg}_git_repo_found}" PARENT_SCOPE)
+
+                    _get_git_repo_latest_tag("${_pkg}")
+                    set(MODULE_${_pkg}_git_latest_tag "${MODULE_${_pkg}_git_latest_tag}" PARENT_SCOPE)
                 endif()
             endforeach()
         else()
             message(WARNING "define_module: no required_packages file found at ${CMAKE_SOURCE_DIR}")
         endif()
 
+        return()
     else()
         set(NAME "${ARGV0}")
         set(_primary OFF)
@@ -234,6 +318,7 @@ function(define_module)
     string(TOLOWER "${NAME}" _lower)
 
     set(_metadata_file "${_lower}.pc")
+    set(_git_repo      "${_SLIM_GIT_BASE}/${NAME}.git")
 
     if("${_type}" STREQUAL "SlimCommon")
         set(_primary ON)
@@ -287,6 +372,9 @@ function(define_module)
         min_version      "${_min_version}"
         max_version      "${_max_version}"
         found_version    "${_EMPTY_SENTINEL}"
+        git_repo         "${_git_repo}"
+        git_repo_found   "${_EMPTY_SENTINEL}"
+        git_latest_tag   "${_EMPTY_SENTINEL}"
         header_prefix    "${_header_prefix}"
         header_file_in   "${_header_file_in}"
         header_file_out  "${_header_file_out}"

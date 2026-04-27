@@ -1,8 +1,46 @@
 {
-	"image": "slim-toolchain",
-	"dockerFile": "Dockerfile",
+	"name": "Slim Dev",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"runArgs": [
+		"--name",
+		"slim-toolchain-container"
+	],
 	"mounts": [
 		"source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
 	],
-	"workspaceFolder": "/workspace"
+	"workspaceFolder": "/workspace",
+	"containerEnv": {
+		"LANG": "${localEnv:LANG}",
+		"LC_ALL": "${localEnv:LC_ALL}",
+		"TZ": "America/Los_Angeles"
+	},
+	"postCreateCommand": "git config --global core.editor 'code --wait'",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"GridFlowTech.document-tabs",
+				"ms-vscode.cmake-tools"
+			]
+		},
+		"settings": {
+			"editor.insertSpaces": false,
+			"editor.mouseWheelZoom": true,
+			"editor.tabSize": 4,
+			"editor.hover.enabled": "on",
+			"editor.hover.delay": 1000,
+			"editor.tabCompletion": "on",
+			"editor.minimap.enabled": false,
+			"html.autoClosingTags": true,
+			"javascript.autoClosingTags": true,
+			"typescript.autoClosingTags": true,
+			"C_Cpp.default.cppStandard": "c++23",
+			"code-runner.fileDirectoryAsCwd": false,
+			"code-runner.executorMapByFileExtension": {
+				".cpp": "${workspaceFolder} && make install"
+			}
+		}
+	}
 }
+

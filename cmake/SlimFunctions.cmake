@@ -120,10 +120,15 @@ endfunction()
 # _set_git_tag(<NAME>)  [internal] — primary module only
 # ---------------------------------------------------------------------------
 function(_set_git_tag NAME)
+
+    meta_get(MODULE "${NAME}" primary _primary)
+
     if(SLIM_USE_LOCAL_SOURCE)
-        meta_set(MODULE "${NAME}" git_tag  "0.0.0")
-        meta_set(MODULE "${NAME}" git_hash "none")
-        _propagate_module("${NAME}")
+        if(_primary)
+            meta_set(MODULE "${NAME}" git_tag  "0.0.0")
+            meta_set(MODULE "${NAME}" git_hash "none")
+            _propagate_module("${NAME}")
+        endif()
         return()
     endif()
 
@@ -236,6 +241,52 @@ function(_set_check_module NAME MIN_VERSION MAX_VERSION)
 endfunction()
 
 # ---------------------------------------------------------------------------
+# _set_module_headers(<NAME>)  [internal]
+# ---------------------------------------------------------------------------
+function(_set_module_headers NAME)
+    _derive_module_type("${NAME}" _type)
+
+    if("${_type}" STREQUAL "SlimCommon")
+        # need to make sure that correct sub-module headers are collected
+
+    elseif("${_type}" STREQUAL "SlimLib")
+        meta_set(MODULE "${NAME}" hpp_only        "ON")
+        set(_hdr_in "include/slim/${NAME}.hpp.in")
+        string(REGEX REPLACE "\.in$" "" _hdr_out "${_hdr_in}")
+        meta_set(MODULE "${NAME}" header_prefix   "${NAME}")
+        meta_set(MODULE "${NAME}" header_file_in  "${_hdr_in}")
+        meta_set(MODULE "${NAME}" header_file_out "${_hdr_out}")
+        meta_set(MODULE "${NAME}" include_dir     "include/slim")
+
+    elseif("${_type}" STREQUAL "SlimCommonOtherlibSublib")
+        string(REGEX REPLACE "^SlimCommon" "" _suffix "${NAME}")
+        string(REGEX MATCHALL "[A-Z][a-z0-9]*" _words "${_suffix}")
+        list(GET _words 0 _word0)
+        string(TOLOWER "${_word0}" _word0)
+        list(LENGTH _words _word_count)
+
+        if(_word_count EQUAL 1)
+            set(_hdr_in  "include/slim/common/${_word0}.h.in")
+            set(_inc_dir "include/slim/common")
+            meta_set(MODULE "${NAME}" header_prefix "${_word0}")
+        elseif(_word_count EQUAL 2)
+            list(GET _words 1 _word1)
+            string(TOLOWER "${_word1}" _word1)
+            set(_hdr_in  "include/slim/common/${_word0}/${_word1}.h.in")
+            set(_inc_dir "include/slim/common/${_word0}")
+            meta_set(MODULE "${NAME}" header_prefix "${_word1}")
+        endif()
+        string(REGEX REPLACE "\.in$" "" _hdr_out "${_hdr_in}")
+        meta_set(MODULE "${NAME}" header_file_in  "${_hdr_in}")
+        meta_set(MODULE "${NAME}" header_file_out "${_hdr_out}")
+        meta_set(MODULE "${NAME}" include_dir     "${_inc_dir}")
+
+    endif()
+
+    _propagate_module("${NAME}")
+endfunction()
+
+# ---------------------------------------------------------------------------
 # define_module([NAME] [min_version] [max_version])
 #   No args: derives name from CMAKE_SOURCE_DIR and auto-loads required_packages.
 # ---------------------------------------------------------------------------
@@ -247,9 +298,6 @@ function(define_module)
         cmake_path(GET CMAKE_SOURCE_DIR FILENAME NAME)
 
         define_module("${NAME}" "${_EMPTY_SENTINEL}" "${_EMPTY_SENTINEL}" ON)
-        _set_git_repo("${NAME}")
-        _set_git_tag("${NAME}")
-        _set_git_repo_latest_tag("${NAME}")
         _propagate_module("${NAME}")
 
         if(EXISTS "${CMAKE_SOURCE_DIR}/required_packages")
@@ -278,9 +326,6 @@ function(define_module)
 
                     define_module("${_pkg}" "${_pkg_min}" "${_pkg_max}")
                     _set_check_module("${_pkg}" "${_pkg_min}" "${_pkg_max}")
-                    _set_git_repo("${_pkg}")
-                    _set_git_tag("${_pkg}")
-                    _set_git_repo_latest_tag("${_pkg}")
                     _propagate_module("${_pkg}")
                 endif()
             endforeach()
@@ -296,76 +341,29 @@ function(define_module)
     # ------------------------------------------------------------------
     set(NAME "${ARGV0}")
 
-    set(_primary OFF)
+#    set(_primary OFF)
     if(ARGC GREATER 3 AND "${ARGV3}" STREQUAL "ON")
-        set(_primary ON)
+        meta_set(MODULE "${NAME}" primary ON)
     endif()
 
-    set(_min_version "${_EMPTY_SENTINEL}")
-    set(_max_version "${_EMPTY_SENTINEL}")
     if(ARGC GREATER 1 AND NOT "${ARGV1}" STREQUAL "")
-        set(_min_version "${ARGV1}")
+        meta_set(MODULE "${NAME}" min_version   "${ARGV1}")
     endif()
     if(ARGC GREATER 2 AND NOT "${ARGV2}" STREQUAL "")
-        set(_max_version "${ARGV2}")
+        meta_set(MODULE "${NAME}" max_version   "${ARGV2}")
     endif()
-
-    _derive_module_type("${NAME}" _type)
 
     string(TOUPPER "${NAME}" _upper)
     string(TOLOWER "${NAME}" _lower)
-
     meta_set(MODULE "${NAME}" upper         "${_upper}")
     meta_set(MODULE "${NAME}" lower         "${_lower}")
-    meta_set(MODULE "${NAME}" primary       "${_primary}")
-    meta_set(MODULE "${NAME}" min_version   "${_min_version}")
-    meta_set(MODULE "${NAME}" max_version   "${_max_version}")
-    meta_set(MODULE "${NAME}" git_repo      "${_SLIM_GIT_BASE}/${NAME}.git")
     meta_set(MODULE "${NAME}" metadata_file "${_lower}.pc")
-
-    if("${_type}" STREQUAL "SlimLib")
-        meta_set(MODULE "${NAME}" hpp_only "ON")
-    else()
-        meta_set(MODULE "${NAME}" hpp_only "OFF")
-    endif()
-
-    if("${_type}" STREQUAL "SlimCommon")
-        meta_set(MODULE "${NAME}" header_prefix   "")
-        meta_set(MODULE "${NAME}" header_file_in  "")
-        meta_set(MODULE "${NAME}" header_file_out "")
-        meta_set(MODULE "${NAME}" include_dir     "")
-
-    elseif("${_type}" STREQUAL "SlimCommonOtherlibSublib")
-        string(REGEX REPLACE "^SlimCommon" "" _suffix "${NAME}")
-        string(REGEX MATCHALL "[A-Z][a-z0-9]*" _words "${_suffix}")
-        list(GET _words 0 _word0)
-        string(TOLOWER "${_word0}" _word0)
-        list(LENGTH _words _word_count)
-
-        if(_word_count EQUAL 1)
-            set(_hdr_in  "include/slim/${_word0}.h.in")
-            set(_inc_dir "include/slim")
-            meta_set(MODULE "${NAME}" header_prefix "${_word0}")
-        else()
-            list(GET _words 1 _word1)
-            string(TOLOWER "${_word1}" _word1)
-            set(_hdr_in  "include/slim/${_word0}/${_word1}.h.in")
-            set(_inc_dir "include/slim/${_word0}")
-            meta_set(MODULE "${NAME}" header_prefix "${_word1}")
-        endif()
-        string(REGEX REPLACE "\.in$" "" _hdr_out "${_hdr_in}")
-        meta_set(MODULE "${NAME}" header_file_in  "${_hdr_in}")
-        meta_set(MODULE "${NAME}" header_file_out "${_hdr_out}")
-        meta_set(MODULE "${NAME}" include_dir     "${_inc_dir}")
-
-    else() # SlimLib
-        set(_hdr_in "include/slim/${NAME}.hpp.in")
-        string(REGEX REPLACE "\.in$" "" _hdr_out "${_hdr_in}")
-        meta_set(MODULE "${NAME}" header_prefix   "${NAME}")
-        meta_set(MODULE "${NAME}" header_file_in  "${_hdr_in}")
-        meta_set(MODULE "${NAME}" header_file_out "${_hdr_out}")
-        meta_set(MODULE "${NAME}" include_dir     "include/slim")
-    endif()
-
+    _set_module_headers("${NAME}")
+    meta_set(MODULE "${NAME}" git_repo      "${_SLIM_GIT_BASE}/${NAME}.git")
+    
+    _set_git_repo("${NAME}")
+    _set_git_tag("${NAME}")
+    _set_git_repo_latest_tag("${NAME}")    
+    
     _propagate_module("${NAME}")
 endfunction()

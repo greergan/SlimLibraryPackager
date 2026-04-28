@@ -84,6 +84,45 @@ function(_derive_module_type NAME OUT_TYPE)
 endfunction()
 
 # ---------------------------------------------------------------------------
+# _load_required_packages(<FILE>)  [internal]
+# ---------------------------------------------------------------------------
+function(_load_required_packages FILE)
+    if(NOT EXISTS "${FILE}")
+        message(WARNING "_load_required_packages: file not found '${FILE}'")
+        return()
+    endif()
+    message(STATUS "_load_required_packages: processing file '${FILE}'")
+
+    file(STRINGS "${FILE}" _package_lines REGEX "^[^#\n]")
+    foreach(_line IN LISTS _package_lines)
+        string(STRIP "${_line}" _line)
+        if(NOT "${_line}" STREQUAL "")
+            string(REGEX MATCHALL "[^ \t]+" _tokens "${_line}")
+            list(GET _tokens 0 _pkg)
+            list(LENGTH _tokens _token_count)
+
+            set(_pkg_min "${_EMPTY_SENTINEL}")
+            set(_pkg_max "${_EMPTY_SENTINEL}")
+            if(_token_count GREATER 1)
+                list(GET _tokens 1 _pkg_min)
+                if("${_pkg_min}" STREQUAL "")
+                    set(_pkg_min "${_EMPTY_SENTINEL}")
+                endif()
+            endif()
+            if(_token_count GREATER 2)
+                list(GET _tokens 2 _pkg_max)
+                if("${_pkg_max}" STREQUAL "")
+                    set(_pkg_max "${_EMPTY_SENTINEL}")
+                endif()
+            endif()
+
+            define_module("${_pkg}" "${_pkg_min}" "${_pkg_max}")
+            _propagate_module("${_pkg}")
+        endif()
+    endforeach()
+endfunction()
+
+# ---------------------------------------------------------------------------
 # _set_git_repo(<NAME>)  [internal]
 # ---------------------------------------------------------------------------
 function(_set_git_repo NAME)
@@ -332,47 +371,17 @@ function(define_module)
         cmake_path(GET CMAKE_SOURCE_DIR FILENAME NAME)
 
         define_module("${NAME}" "${_EMPTY_SENTINEL}" "${_EMPTY_SENTINEL}" ON)
+        set(REQUIRED_PACKAGE_FILE "${CMAKE_SOURCE_DIR}/required_packages")
+      
+        _load_required_packages(${REQUIRED_PACKAGE_FILE})
         _propagate_module("${NAME}")
-
-        if(EXISTS "${CMAKE_SOURCE_DIR}/required_packages")
-            file(STRINGS "${CMAKE_SOURCE_DIR}/required_packages" _package_lines REGEX "^[^#\n]")
-            foreach(_line IN LISTS _package_lines)
-                string(STRIP "${_line}" _line)
-                if(NOT "${_line}" STREQUAL "")
-                    string(REGEX MATCHALL "[^ \t]+" _tokens "${_line}")
-                    list(GET _tokens 0 _pkg)
-                    list(LENGTH _tokens _token_count)
-
-                    set(_pkg_min "${_EMPTY_SENTINEL}")
-                    set(_pkg_max "${_EMPTY_SENTINEL}")
-                    if(_token_count GREATER 1)
-                        list(GET _tokens 1 _pkg_min)
-                        if("${_pkg_min}" STREQUAL "")
-                            set(_pkg_min "${_EMPTY_SENTINEL}")
-                        endif()
-                    endif()
-                    if(_token_count GREATER 2)
-                        list(GET _tokens 2 _pkg_max)
-                        if("${_pkg_max}" STREQUAL "")
-                            set(_pkg_max "${_EMPTY_SENTINEL}")
-                        endif()
-                    endif()
-
-                    define_module("${_pkg}" "${_pkg_min}" "${_pkg_max}")
-                    _set_check_module("${_pkg}" "${_pkg_min}" "${_pkg_max}")
-                    _propagate_module("${_pkg}")
-                endif()
-            endforeach()
-        else()
-            message(WARNING "define_module: no required_packages file found at ${CMAKE_SOURCE_DIR}")
-        endif()
-
         return()
     endif()
 
     # ---------------------------------------------------------------------
     # Re-entrant branch: compute and store all derived fields incrementally
     # ---------------------------------------------------------------------
+message(STATUS "define_module: calling _set_package_info for '${ARGV0}' min='${ARGV1}' max='${ARGV2}' primary='${ARGV3}'")
     _set_package_info("${ARGV0}" ${ARGV1} ${ARGV2} ${ARGV3})
     _set_metadata_file("${ARGV0}")
     _set_module_headers("${ARGV0}")

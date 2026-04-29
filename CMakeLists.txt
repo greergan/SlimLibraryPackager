@@ -1,26 +1,17 @@
 cmake_minimum_required(VERSION 3.20)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-set(SLIMLIB_CXX_STANDARD "23")
+set(SLIM_CXX_STANDARD "23")
+set(SLIM_CXX_FLAGS "")
 set(_SLIM_GIT_BASE "https://github.com/greergan")
-
-include(SlimModuleFunctions)
-include(TargetFunctions)
 
 cmake_path(GET CMAKE_SOURCE_DIR FILENAME _project_name)
 project(${_project_name} LANGUAGES CXX)
+include(GNUInstallDirs)
+include(SlimFunctions)
+include(SlimModuleFunctions)
 
 define_module()
-
-get_primary_module(PRIMARY_MODULE)
-if(NOT PRIMARY_MODULE)
-    message(FATAL_ERROR "No primary module defined")
-endif()
-message(STATUS "Primary module: ${PRIMARY_MODULE}")
-
-include(GNUInstallDirs)
-include(SetCompilerOptions)
-
 compile_targets()
 
 # do not remove this foreach
@@ -86,7 +77,6 @@ foreach(NAME IN LISTS MODULE_NAMES)
         message(STATUS "")
     endif()
 endforeach()
-
 
 # Do not rewrite below here
 return()

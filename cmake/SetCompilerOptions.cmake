@@ -1,7 +1,7 @@
 set(SLIM_CXX_FLAGS "")
+list(APPEND SLIM_CXX_FLAGS ${SLIM_CXX_STANDARD})
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     list(APPEND SLIM_CXX_FLAGS
-        -std=c++${SLIMLIB_CXX_STANDARD}
         -Wall
         -Wextra
         -Wpedantic
@@ -18,7 +18,6 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
     endif()
 elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     list(APPEND SLIM_CXX_FLAGS
-        /std:c++${SLIMLIB_CXX_STANDARD}
         /W4
         /WX-
         /permissive-

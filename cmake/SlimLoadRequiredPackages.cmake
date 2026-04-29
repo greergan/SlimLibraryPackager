@@ -1,0 +1,38 @@
+# ---------------------------------------------------------------------------
+# _load_required_packages(<FILE>)  [internal]
+# ---------------------------------------------------------------------------
+function(_load_required_packages FILE)
+    if(NOT EXISTS "${FILE}")
+        message(WARNING "_load_required_packages: file not found '${FILE}'")
+        return()
+    endif()
+    message(STATUS "_load_required_packages: processing file '${FILE}'")
+
+    file(STRINGS "${FILE}" _package_lines REGEX "^[^#\n]")
+    foreach(_line IN LISTS _package_lines)
+        string(STRIP "${_line}" _line)
+        if(NOT "${_line}" STREQUAL "")
+            string(REGEX MATCHALL "[^ \t]+" _tokens "${_line}")
+            list(GET _tokens 0 _pkg)
+            list(LENGTH _tokens _token_count)
+
+            set(_pkg_min "${_EMPTY_SENTINEL}")
+            set(_pkg_max "${_EMPTY_SENTINEL}")
+            if(_token_count GREATER 1)
+                list(GET _tokens 1 _pkg_min)
+                if("${_pkg_min}" STREQUAL "")
+                    set(_pkg_min "${_EMPTY_SENTINEL}")
+                endif()
+            endif()
+            if(_token_count GREATER 2)
+                list(GET _tokens 2 _pkg_max)
+                if("${_pkg_max}" STREQUAL "")
+                    set(_pkg_max "${_EMPTY_SENTINEL}")
+                endif()
+            endif()
+
+            define_module("${_pkg}" "${_pkg_min}" "${_pkg_max}")
+            _propagate_module("${_pkg}")
+        endif()
+    endforeach()
+endfunction()

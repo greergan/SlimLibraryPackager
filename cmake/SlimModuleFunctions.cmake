@@ -1,9 +1,55 @@
 set(_EMPTY_SENTINEL "__EMPTY__")
-set(_SLIM_GIT_BASE "https://github.com/greergan")
 
 include(SlimMetaFunctions)
 include(SlimGitFunctions)
 include(SlimLoadRequiredPackages)
+
+# ---------------------------------------------------------------------------
+# apply_module_flags(<TARGET>)
+# Iterates MODULE_NAMES and applies pkg_CFLAGS, pkg_LDFLAGS, pkg_INCLUDE_DIRS,
+# and pkg_LIBRARIES from each non-primary module to the given target.
+# ---------------------------------------------------------------------------
+function(apply_module_flags TARGET)
+    foreach(_name IN LISTS MODULE_NAMES)
+        meta_get(MODULE "${_name}" primary _is_primary)
+        if(_is_primary)
+            continue()
+        endif()
+
+        meta_get(MODULE "${_name}" pkg_CFLAGS      _cflags)
+        meta_get(MODULE "${_name}" pkg_LDFLAGS     _ldflags)
+        meta_get(MODULE "${_name}" pkg_INCLUDE_DIRS _inc_dirs)
+        meta_get(MODULE "${_name}" pkg_LIBRARIES   _libs)
+
+        if(_cflags)
+            target_compile_options(${TARGET} PRIVATE ${_cflags})
+        endif()
+
+        if(_inc_dirs)
+            target_include_directories(${TARGET} PRIVATE ${_inc_dirs})
+        endif()
+
+        if(_ldflags OR _libs)
+            target_link_options(${TARGET} PRIVATE ${_ldflags})
+            target_link_libraries(${TARGET} PRIVATE ${_libs})
+        endif()
+    endforeach()
+endfunction()
+
+# ---------------------------------------------------------------------------
+# get_primary_module(<OUT_VAR>)
+# Returns the name of the primary module, or empty string if none found.
+# ---------------------------------------------------------------------------
+function(get_primary_module OUT_VAR)
+    foreach(_name IN LISTS MODULE_NAMES)
+        meta_get(MODULE "${_name}" primary _is_primary)
+        if(_is_primary)
+            set(${OUT_VAR} "${_name}" PARENT_SCOPE)
+            return()
+        endif()
+    endforeach()
+    set(${OUT_VAR} "" PARENT_SCOPE)
+endfunction()
 
 # ---------------------------------------------------------------------------
 # _derive_module_type(<NAME> <OUT_TYPE>)  [internal]

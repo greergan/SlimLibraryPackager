@@ -1,11 +1,30 @@
 cmake_minimum_required(VERSION 3.20)
+
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-set(SLIM_CXX_STANDARD "-std=c++-23")
+set(SLIMLIB_CXX_STANDARD "23")
 set(_SLIM_GIT_BASE "https://github.com/greergan")
 
 include(SlimModuleFunctions)
+
+cmake_path(GET CMAKE_SOURCE_DIR FILENAME _project_name)
+project(${_project_name} LANGUAGES CXX)
+
 define_module()
 
+get_primary_module(PRIMARY_MODULE)
+if(NOT PRIMARY_MODULE)
+    message(FATAL_ERROR "No primary module defined")
+endif()
+message(STATUS "Primary module: ${PRIMARY_MODULE}")
+
+include(GNUInstallDirs)
+include(SetCompilerOptions)
+include(SetupSlimLibraryTargets)
+
+message(STATUS "Applying compile options to ${_target}")
+set_slim_library_targets()
+
+# do not remove this foreach
 foreach(NAME IN LISTS MODULE_NAMES)
     meta_get(MODULE "${NAME}" primary          IS_PRIMARY)
     meta_get(MODULE "${NAME}" upper            LIB_ID)
@@ -28,9 +47,9 @@ foreach(NAME IN LISTS MODULE_NAMES)
     meta_get(MODULE "${NAME}" pkg_LIBRARIES    PKG_LIBRARIES)
     meta_get(MODULE "${NAME}" pkg_INCLUDE_DIRS PKG_INCLUDE_DIRS)
     meta_get(MODULE "${NAME}" pkg_LIBRARY_DIRS PKG_LIBRARY_DIRS)
-    meta_get(MODULE "${NAME}" git_latest_tag   GIT_LATEST_TAG)  
-    meta_get(MODULE "${NAME}" using_local_src   USING_LOCAL_SRC)
-    meta_get(MODULE "${NAME}" src_dir   SOURCE_DIR)
+    meta_get(MODULE "${NAME}" git_latest_tag   GIT_LATEST_TAG)
+    meta_get(MODULE "${NAME}" using_local_src  USING_LOCAL_SRC)
+    meta_get(MODULE "${NAME}" src_dir          SOURCE_DIR)
 
     message(STATUS "Module:             ${NAME}")
     message(STATUS "  Lib:              ${LIB_ID}")
@@ -53,16 +72,26 @@ foreach(NAME IN LISTS MODULE_NAMES)
     message(STATUS "  Include Dir:      ${INCLUDE_DIR}")
     message(STATUS "  Metadata File:    ${METADATA_FILE}")
     message(STATUS "  Pkg CFlags:       ${PKG_CFLAGS}")
-	message(STATUS "  Pkg LDFlags:      ${PKG_LDFLAGS}")
+    message(STATUS "  Pkg LDFlags:      ${PKG_LDFLAGS}")
     message(STATUS "  Pkg Libraries:    ${PKG_LIBRARIES}")
     message(STATUS "  Pkg Include Dirs: ${PKG_INCLUDE_DIRS}")
     message(STATUS "  Pkg Library Dirs: ${PKG_LIBRARY_DIRS}")
     message(STATUS "")
+
+    if(IS_PRIMARY AND NOT HPP_ONLY)
+        foreach(_target ${PKG_NAME}_shared ${PKG_NAME}_static)
+            if(TARGET ${_target})
+                dump_target_properties(${_target})
+            endif()
+        endforeach()
+        message(STATUS "")
+    endif()
 endforeach()
 
+
+# Do not rewrite below here
 return()
-project(${SLIM_LIB} VERSION ${GIT_TAG} LANGUAGES CXX)
-include(SetCompilerOptions)
+
 include(GNUInstallDirs)
 include(RunMainTest)
 include(RunCatch2Tests)

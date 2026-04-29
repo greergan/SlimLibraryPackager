@@ -9,13 +9,13 @@ function(apply_slim_compile_options TARGET)
 endfunction()
 
 # ---------------------------------------------------------------------------
-# set_slim_library_targets()
+# compile_targets()
 # Derives all target information from the primary module's metadata.
 # ---------------------------------------------------------------------------
-function(set_slim_library_targets)
+function(compile_targets)
     get_primary_module(_primary)
     if(NOT _primary)
-        message(FATAL_ERROR "setup_slim_library_targets: no primary module defined")
+        message(FATAL_ERROR "compile_targets: no primary module defined")
     endif()
 
     meta_get(MODULE "${_primary}" lower          _lower)

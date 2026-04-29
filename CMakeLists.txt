@@ -5,6 +5,7 @@ set(SLIMLIB_CXX_STANDARD "23")
 set(_SLIM_GIT_BASE "https://github.com/greergan")
 
 include(SlimModuleFunctions)
+include(TargetFunctions)
 
 cmake_path(GET CMAKE_SOURCE_DIR FILENAME _project_name)
 project(${_project_name} LANGUAGES CXX)
@@ -19,10 +20,8 @@ message(STATUS "Primary module: ${PRIMARY_MODULE}")
 
 include(GNUInstallDirs)
 include(SetCompilerOptions)
-include(SetupSlimLibraryTargets)
 
-message(STATUS "Applying compile options to ${_target}")
-set_slim_library_targets()
+compile_targets()
 
 # do not remove this foreach
 foreach(NAME IN LISTS MODULE_NAMES)
@@ -92,7 +91,6 @@ endforeach()
 # Do not rewrite below here
 return()
 
-include(GNUInstallDirs)
 include(RunMainTest)
 include(RunCatch2Tests)
 include(RunInstall)

@@ -9,11 +9,11 @@ function(make_packages)
     if(NOT _primary)
         message(FATAL_ERROR "make_packages: no primary module defined")
     endif()
- 
+
     meta_get(MODULE "${_primary}" lower       _lower)
     meta_get(MODULE "${_primary}" git_tag     _version)
     meta_get(MODULE "${_primary}" upper       _upper)
- 
+
     # --- Architecture ---------------------------------------------------------
     string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _arch)
     if(_arch MATCHES "x86_64|amd64")
@@ -27,10 +27,10 @@ function(make_packages)
     else()
         set(_arch_name "unknown")
     endif()
- 
+
     # --- Align install prefix with CPack packaging prefix -----------------
     set(CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "" FORCE)
- 
+
     # --- CPack common -----------------------------------------------------
     set(CPACK_GENERATOR "DEB;RPM")
     set(CPACK_PACKAGE_NAME              ${_lower})
@@ -38,13 +38,13 @@ function(make_packages)
     set(CPACK_PACKAGE_CONTACT           "${GIT_USER_NAME} <${GIT_USER_EMAIL}>")
     set(CPACK_PACKAGE_FILE_NAME         "${_lower}-${_version}-${_arch_name}")
     set(CPACK_PACKAGING_INSTALL_PREFIX  "/usr")
- 
+
     # --- DEB --------------------------------------------------------------
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER  ${GIT_USER_NAME})
     set(CPACK_DEBIAN_PACKAGE_SECTION     "devel")
     set(CPACK_DEBIAN_PACKAGE_PRIORITY    "optional")
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE ${_arch_name})
- 
+
     # --- RPM --------------------------------------------------------------
     set(CPACK_RPM_PACKAGE_NAME         ${_lower})
     set(CPACK_RPM_PACKAGE_VERSION      ${_version})
@@ -53,20 +53,21 @@ function(make_packages)
     set(CPACK_RPM_PACKAGE_GROUP        "Development/Libraries")
     set(CPACK_RPM_PACKAGE_ARCHITECTURE ${_arch_name})
     set(CPACK_RPM_PACKAGE_PREFIX       ${CMAKE_INSTALL_PREFIX})
- 
+
     meta_get(MODULE "${_primary}" description _description)
     if(_description)
         set(CPACK_RPM_PACKAGE_SUMMARY ${_description})
     endif()
- 
+
     include(CPack)
- 
+
     add_custom_target(dist
+        COMMAND ${CMAKE_COMMAND} --install "${CMAKE_BINARY_DIR}" --prefix "${CMAKE_CURRENT_BINARY_DIR}/dist"
         COMMAND ${CMAKE_CPACK_COMMAND} --config "${CMAKE_BINARY_DIR}/CPackConfig.cmake"
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMENT "Building distribution packages for '${_lower}'"
+        COMMENT "Installing and building distribution packages for '${_lower}'"
         VERBATIM
     )
- 
+
     message(STATUS "make_packages: added target 'dist'")
 endfunction()

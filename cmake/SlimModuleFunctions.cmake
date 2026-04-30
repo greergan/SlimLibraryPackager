@@ -130,6 +130,25 @@ function(_set_check_module NAME MIN_VERSION MAX_VERSION)
 endfunction()
 
 # ---------------------------------------------------------------------------
+# set_dist_directory(<NAME>)
+# Sets dist_dir on the given module to a 'dist' directory that lives next
+# to the build directory.
+# ---------------------------------------------------------------------------
+function(set_dist_directory NAME)
+    meta_get(MODULE "${NAME}" primary _is_primary)
+    if(NOT _is_primary)
+        message(WARNING "set_dist_directory: '${NAME}' is not a primary module")
+        return()
+    endif()
+
+    cmake_path(GET CMAKE_BINARY_DIR PARENT_PATH _build_parent)
+    meta_set(MODULE "${NAME}" dist_dir "${_build_parent}/dist")
+    _propagate_module("${NAME}")
+
+    message(STATUS "set_dist_directory: ${NAME}.dist_dir=${_build_parent}/dist")
+endfunction()
+
+# ---------------------------------------------------------------------------
 # _set_metadata_file(<NAME>)  [internal]
 # ---------------------------------------------------------------------------
 function(_set_metadata_file NAME)
@@ -285,5 +304,6 @@ function(define_module)
     _set_git_repo("${ARGV0}")
     _set_check_module("${ARGV0}" "${ARGV1}" "${ARGV2}")
     _set_source_info("${ARGV0}")
+    set_dist_directory("${ARGV0}")
     _propagate_module("${ARGV0}")
 endfunction()

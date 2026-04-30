@@ -16,7 +16,7 @@ generate_main_cpp()
 compile_targets()
 test_targets()
 test_catch2_targets()
-make_install()
+make_install_artifacts()
 make_packages()
 
 # do not remove this foreach

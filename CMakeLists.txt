@@ -15,8 +15,7 @@ define_module()
 generate_main_cpp()
 compile_targets()
 test_targets()
-
-
+test_catch2_targets()
 
 # do not remove this foreach
 foreach(NAME IN LISTS MODULE_NAMES)

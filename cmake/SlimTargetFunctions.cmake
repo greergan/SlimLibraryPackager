@@ -111,6 +111,12 @@ function(test_targets)
         return()
     endif()
 
+    if(NOT _hpp_only)
+        message(STATUS "test_targets: library target properties before compilation:")
+        dump_target_properties(${_lower}_shared)
+        dump_target_properties(${_lower}_static)
+    endif()
+
     foreach(_linkage shared static)
         set(_target ${_lower}_test_${_linkage})
 
@@ -146,6 +152,79 @@ function(test_targets)
 
         message(STATUS "test_targets: added target '${_target}'")
     endforeach()
+endfunction()
+
+# ---------------------------------------------------------------------------
+# test_catch2_targets()
+# Fetches Catch2 v3.5.0, compiles all tests/*.cpp sources from the primary
+# module's source tree, and wires them up with CTest and catch_discover_tests.
+# Mirrors the primary module's include directories and compile options.
+# Runs the test executable as a POST_BUILD step.
+# ---------------------------------------------------------------------------
+function(test_catch2_targets)
+    get_primary_module(_primary)
+    if(NOT _primary)
+        message(FATAL_ERROR "test_catch2_targets: no primary module defined")
+    endif()
+
+    meta_get(MODULE "${_primary}" lower       _lower)
+    meta_get(MODULE "${_primary}" src_dir     _src_dir)
+    meta_get(MODULE "${_primary}" include_dir _inc_dir)
+    meta_get(MODULE "${_primary}" hpp_only    _hpp_only)
+
+    set(_tests_dir "${_src_dir}/tests")
+    if(NOT EXISTS "${_tests_dir}")
+        message(STATUS "test_catch2_targets: disabled (no tests directory found)")
+        return()
+    endif()
+    message(STATUS "test_catch2_targets: enabled")
+
+    file(GLOB_RECURSE _test_sources "${_tests_dir}/*.cpp")
+
+    if(NOT _hpp_only)
+        message(STATUS "test_catch2_targets: library target properties before compilation:")
+        dump_target_properties(${_lower}_shared)
+        dump_target_properties(${_lower}_static)
+    endif()
+
+    include(FetchContent)
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG v3.5.0
+    )
+    FetchContent_MakeAvailable(Catch2)
+
+    enable_testing()
+
+    add_executable(${_lower}_catch2_tests ${_test_sources})
+
+    target_include_directories(${_lower}_catch2_tests
+        PRIVATE
+            $<BUILD_INTERFACE:${_src_dir}/${_inc_dir}>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/${_inc_dir}>
+    )
+
+    if(NOT _hpp_only)
+        target_link_libraries(${_lower}_catch2_tests PRIVATE ${_lower}_static)
+    endif()
+
+    apply_slim_compile_options(${_lower}_catch2_tests)
+    target_compile_features(${_lower}_catch2_tests PRIVATE cxx_std_${SLIM_CXX_STANDARD})
+
+    target_link_libraries(${_lower}_catch2_tests PRIVATE Catch2::Catch2WithMain)
+
+    include(CTest)
+    include(Catch)
+    catch_discover_tests(${_lower}_catch2_tests)
+
+    add_custom_command(TARGET ${_lower}_catch2_tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E echo "Running ${_lower}_catch2_tests..."
+        COMMAND $<TARGET_FILE:${_lower}_catch2_tests>
+        COMMENT "Running ${_lower}_catch2_tests"
+    )
+
+    message(STATUS "test_catch2_targets: added target '${_lower}_catch2_tests'")
 endfunction()
 
 # ---------------------------------------------------------------------------

@@ -67,16 +67,59 @@ endfunction()
 # .deb / .rpm packages in the module's dist_dir.
 # ---------------------------------------------------------------------------
 function(make_packages)
+
+
+
+# ---------------------------------------------------------------------------
+# _set_git_user_info()  [internal]
+# Resolves GIT_USER_NAME and GIT_USER_EMAIL from the local git config.
+# ---------------------------------------------------------------------------
+function(_set_git_user_info)
+    find_program(_GIT_EXEC git)
+    if(NOT _GIT_EXEC)
+        message(FATAL_ERROR "_set_git_user_info: git executable not found.")
+    endif()
+
+    execute_process(
+        COMMAND "${_GIT_EXEC}" config --get user.name
+        OUTPUT_VARIABLE GIT_USER_NAME
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+
+    execute_process(
+        COMMAND "${_GIT_EXEC}" config --get user.email
+        OUTPUT_VARIABLE GIT_USER_EMAIL
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+
+    if("${GIT_USER_NAME}" STREQUAL "")
+        message(FATAL_ERROR "_set_git_user_info: could not resolve git user.name.")
+    endif()
+    if("${GIT_USER_EMAIL}" STREQUAL "")
+        message(FATAL_ERROR "_set_git_user_info: could not resolve git user.email.")
+    endif()
+
+    set(GIT_USER_NAME  "${GIT_USER_NAME}"  PARENT_SCOPE)
+    set(GIT_USER_EMAIL "${GIT_USER_EMAIL}" PARENT_SCOPE)
+endfunction()
+
+
+
+
+
     get_primary_module(_primary)
     if(NOT _primary)
         message(FATAL_ERROR "make_packages: no primary module defined")
     endif()
 
-    meta_get(MODULE "${_primary}" lower       _lower)
-    meta_get(MODULE "${_primary}" git_tag     _version)
-    meta_get(MODULE "${_primary}" upper       _upper)
-    meta_get(MODULE "${_primary}" dist_dir    _dist_dir)
-    meta_get(MODULE "${_primary}" description _description)
+    meta_get(MODULE "${_primary}" description    _description)
+    meta_get(MODULE "${_primary}" dist_dir       _dist_dir)
+    meta_get(MODULE "${_primary}" git_tag        _version)
+    meta_get(MODULE "${_primary}" git_user_email _git_user_email)
+    meta_get(MODULE "${_primary}" git_user_name  _git_user_name)
+    meta_get(MODULE "${_primary}" lower          _package_name)
 
     if(NOT _dist_dir)
         message(FATAL_ERROR "make_packages: no dist_dir defined for '${_primary}'")
@@ -108,27 +151,27 @@ function(make_packages)
     # function() are invisible to include(CPack) if called here.
     # -----------------------------------------------------------------------
     set(CPACK_GENERATOR                  "DEB;RPM"                                              PARENT_SCOPE)
-    set(CPACK_PACKAGE_NAME               "${_lower}"                                            PARENT_SCOPE)
+    set(CPACK_PACKAGE_NAME               "${_package_name}"                                     PARENT_SCOPE)
     set(CPACK_PACKAGE_VERSION            "${_version}"                                          PARENT_SCOPE)
-    set(CPACK_PACKAGE_CONTACT            "${GIT_USER_NAME} <${GIT_USER_EMAIL}>"                 PARENT_SCOPE)
-    set(CPACK_PACKAGE_FILE_NAME          "${_lower}-${_version}-${_arch_name}"                  PARENT_SCOPE)
+    set(CPACK_PACKAGE_CONTACT            "${_git_user_name} <${_git_user_email}>"               PARENT_SCOPE)
+    set(CPACK_PACKAGE_FILE_NAME          "${_package_name}-${_version}-${_arch_name}"           PARENT_SCOPE)
     set(CPACK_PACKAGING_INSTALL_PREFIX   "/usr"                                                 PARENT_SCOPE)
     set(CPACK_OUTPUT_FILE_PREFIX         "${_dist_dir}"                                         PARENT_SCOPE)
     set(CPACK_INSTALL_CMAKE_PROJECTS     "${CMAKE_BINARY_DIR};${PROJECT_NAME};ALL;/"            PARENT_SCOPE)
 
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER  "${GIT_USER_NAME}"                                    PARENT_SCOPE)
+    set(CPACK_DEBIAN_PACKAGE_MAINTAINER  "${_git_user_name}"                                    PARENT_SCOPE)
     set(CPACK_DEBIAN_PACKAGE_SECTION     "devel"                                                PARENT_SCOPE)
     set(CPACK_DEBIAN_PACKAGE_PRIORITY    "optional"                                             PARENT_SCOPE)
     set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${_arch_name}"                                       PARENT_SCOPE)
     set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${_description}"                                      PARENT_SCOPE)
 
-    set(CPACK_RPM_PACKAGE_NAME           "${_lower}"                                            PARENT_SCOPE)
+    set(CPACK_RPM_PACKAGE_NAME           "${_package_name}"                                     PARENT_SCOPE)
     set(CPACK_RPM_PACKAGE_VERSION        "${_version}"                                          PARENT_SCOPE)
     set(CPACK_RPM_PACKAGE_RELEASE        "1"                                                    PARENT_SCOPE)
     set(CPACK_RPM_PACKAGE_LICENSE        "MIT"                                                  PARENT_SCOPE)
     set(CPACK_RPM_PACKAGE_GROUP          "Development/Libraries"                                PARENT_SCOPE)
     set(CPACK_RPM_PACKAGE_ARCHITECTURE   "${_arch_name}"                                        PARENT_SCOPE)
-    set(CPACK_RPM_PACKAGE_PREFIX         "/usr"                                                 PARENT_SCOPE)
+    set(CPACK_RPM_PACKAGE_PREFIX         "/usr/local"                                           PARENT_SCOPE)
     set(CPACK_RPM_PACKAGE_SUMMARY        "${_description}"                                      PARENT_SCOPE)
 
     # --- 'dist' target ---------------------------------------------------
@@ -143,11 +186,11 @@ function(make_packages)
         VERBATIM
     )
 
-    if(TARGET ${_lower}_shared)
-        add_dependencies(dist ${_lower}_shared)
+    if(TARGET ${_package_name}_shared)
+        add_dependencies(dist ${_package_name}_shared)
     endif()
-    if(TARGET ${_lower}_static)
-        add_dependencies(dist ${_lower}_static)
+    if(TARGET ${_package_name}_static)
+        add_dependencies(dist ${_package_name}_static)
     endif()
 
     message(STATUS "make_packages: 'dist' target will write packages to '${_dist_dir}'")

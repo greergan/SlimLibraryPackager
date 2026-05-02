@@ -37,7 +37,7 @@ configure:
 		-DSLIM_USE_LOCAL_SOURCE=$(LOCAL_SRC)
 
 build: configure
-	$(CMAKE) --build $(BUILD_DIR) --target dist
+	$(CMAKE) --build $(BUILD_DIR)
 
 install:
 	@if [ "$(IS_DEBIAN)" = "yes" ]; then \

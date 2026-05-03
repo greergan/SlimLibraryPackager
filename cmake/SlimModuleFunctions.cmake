@@ -171,7 +171,10 @@ function(_set_module_headers NAME)
     _derive_module_type("${NAME}" _type)
 
     if("${_type}" STREQUAL "SlimCommon")
-        # need to make sure that correct sub-module headers are collected
+        meta_set(MODULE "${NAME}" header_prefix "common")
+        meta_set(MODULE "${NAME}" header_file_in  "include/slim/common.h.in")
+        meta_set(MODULE "${NAME}" header_file_out "include/slim/common.h")
+        meta_set(MODULE "${NAME}" include_dir     "include/slim")
 
     elseif("${_type}" STREQUAL "SlimLib")
         meta_set(MODULE "${NAME}" hpp_only ON)

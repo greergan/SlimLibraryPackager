@@ -24,7 +24,6 @@ include(CPack)  # MUST be at directory scope — make_packages() propagates all
                 # Calling include(CPack) inside a function() causes CPACK_GENERATOR
                 # and CPACK_OUTPUT_FILE_PREFIX to be lost, producing empty packages.
 
-return()
 
 # do not remove this foreach
 foreach(NAME IN LISTS MODULE_NAMES)

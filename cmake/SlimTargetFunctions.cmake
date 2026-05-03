@@ -43,20 +43,30 @@ function(compile_targets)
     string(REGEX MATCH "^([0-9]+)" _ "${_version}")
     set(_version_major "${CMAKE_MATCH_1}")
 
-    # --- Shared library ---------------------------------------------------
-    add_library(${_lower}_shared SHARED "${_src}")
-    set_target_properties(${_lower}_shared PROPERTIES
-        OUTPUT_NAME ${_lower}
-        VERSION     ${_version}
-        SOVERSION   ${_version_major}
-    )
-    # --- Static library ---------------------------------------------------
-    add_library(${_lower}_static STATIC "${_src}")
-    set_target_properties(${_lower}_static PROPERTIES
-        OUTPUT_NAME ${_lower}
-    )
-    # --- Common target settings -------------------------------------------
-    foreach(_target ${_lower}_shared ${_lower}_static)
+    # --- Build targets (static omitted when using local source) -----------
+    set(_linkages shared)
+    if(NOT SLIM_USE_LOCAL_SOURCE)
+        list(APPEND _linkages static)
+    endif()
+
+    meta_get(MODULE "${_primary}" upper _upper)
+    foreach(_linkage ${_linkages})
+        set(_target ${_lower}_${_linkage})
+
+        if("${_linkage}" STREQUAL "shared")
+            add_library(${_target} SHARED "${_src}")
+            set_target_properties(${_target} PROPERTIES
+                OUTPUT_NAME ${_lower}
+                VERSION     ${_version}
+                SOVERSION   ${_version_major}
+            )
+        else()
+            add_library(${_target} STATIC "${_src}")
+            set_target_properties(${_target} PROPERTIES
+                OUTPUT_NAME ${_lower}
+            )
+        endif()
+
         target_include_directories(${_target}
             PUBLIC
                 $<BUILD_INTERFACE:${_src_dir}/${_inc_dir}>
@@ -66,21 +76,18 @@ function(compile_targets)
         message(STATUS "Applying compile options to ${_target}")
         apply_slim_compile_options(${_target})
         target_compile_features(${_target} PUBLIC cxx_std_${SLIM_CXX_STANDARD})
+
+        # Header and .pc installs are handled by make_install_artifacts()
+        install(TARGETS ${_target}
+            EXPORT  ${_upper}Targets
+            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        )
     endforeach()
 
     # --- Alias ------------------------------------------------------------
     add_library(${_lower} ALIAS ${_lower}_shared)
-
-    # --- Install libraries ------------------------------------------------
-    # Header and .pc installs are handled by make_install_artifacts(), which
-    # has visibility into the exact configure_file() output paths.
-    meta_get(MODULE "${_primary}" upper _upper)
-    install(TARGETS ${_lower}_shared ${_lower}_static
-        EXPORT ${_upper}Targets
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
 
     _propagate_module("${_primary}")
 endfunction()
@@ -92,6 +99,7 @@ endfunction()
 # test_static is fully statically linked against the static library (-static /
 # /MT). Both mirror the primary module's include directories and compile
 # options, and are run as a POST_BUILD step.
+# When SLIM_USE_LOCAL_SOURCE is ON only the shared linkage is built.
 # ---------------------------------------------------------------------------
 function(test_targets)
     get_primary_module(_primary)
@@ -118,7 +126,11 @@ function(test_targets)
 
     enable_testing()
 
-    foreach(_linkage shared static)
+    set(_linkages shared)
+    if(NOT SLIM_USE_LOCAL_SOURCE)
+        list(APPEND _linkages static)
+    endif()
+    foreach(_linkage ${_linkages})
         set(_target ${_lower}_test_${_linkage})
 
         add_executable(${_target} "${_test_src}")
@@ -131,7 +143,7 @@ function(test_targets)
 
         if(NOT _hpp_only)
             target_link_libraries(${_target} PRIVATE ${_lower}_${_linkage})
-            if("${_linkage}" STREQUAL "shared")
+            if("${_linkage}" STREQUAL "shared" AND NOT SLIM_USE_LOCAL_SOURCE)
                 target_link_libraries(${_target} PRIVATE ${_lower}_static)
             elseif("${_linkage}" STREQUAL "static")
                 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -161,6 +173,8 @@ endfunction()
 # module's source tree, and wires them up with CTest and catch_discover_tests.
 # Mirrors the primary module's include directories and compile options.
 # Runs the test executable as a POST_BUILD step.
+# When SLIM_USE_LOCAL_SOURCE is ON links against the shared library instead
+# of the static library.
 # ---------------------------------------------------------------------------
 function(test_catch2_targets)
     get_primary_module(_primary)
@@ -185,7 +199,9 @@ function(test_catch2_targets)
     if(NOT _hpp_only)
         message(STATUS "test_catch2_targets: library target properties before compilation:")
         dump_target_properties(${_lower}_shared)
-        dump_target_properties(${_lower}_static)
+        if(NOT SLIM_USE_LOCAL_SOURCE)
+            dump_target_properties(${_lower}_static)
+        endif()
     endif()
 
     include(FetchContent)
@@ -207,7 +223,11 @@ function(test_catch2_targets)
     )
 
     if(NOT _hpp_only)
-        target_link_libraries(${_lower}_catch2_tests PRIVATE ${_lower}_static)
+        if(SLIM_USE_LOCAL_SOURCE)
+            target_link_libraries(${_lower}_catch2_tests PRIVATE ${_lower}_shared)
+        else()
+            target_link_libraries(${_lower}_catch2_tests PRIVATE ${_lower}_static)
+        endif()
     endif()
 
     apply_slim_compile_options(${_lower}_catch2_tests)

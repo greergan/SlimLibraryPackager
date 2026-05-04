@@ -36,6 +36,5 @@ function(set_compiler_flags)
         message(WARNING "Unknown compiler '${CMAKE_CXX_COMPILER_ID}' — no flags set")
     endif()
 
-    list(APPEND flags ${DEFAULT_CXX_FLAG})
     set(SLIM_CXX_FLAGS "${flags}" PARENT_SCOPE)  # propagate to caller
 endfunction()

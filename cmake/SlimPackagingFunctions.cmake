@@ -12,6 +12,7 @@ function(make_install_artifacts)
 
     meta_get(MODULE "${_module_name}" description       _description)
     meta_get(MODULE "${_module_name}" git_tag           _version)
+    meta_get(MODULE "${_module_name}" git_repo          _git_repo)
     meta_get(MODULE "${_module_name}" header_file_in    _hdr_in)
     meta_get(MODULE "${_module_name}" header_file_out   _hdr_out)
     meta_get(MODULE "${_module_name}" hpp_only          _hpp_only)
@@ -42,9 +43,15 @@ function(make_install_artifacts)
     )
 
     # --- pkg-config metadata ----------------------------------------------
+    # @ONLY is required: the .pc template intentionally contains pkg-config
+    # variable references like ${includedir} and ${libdir} that must survive
+    # to the installed file for pkg-config to expand at query time.
+    # Without @ONLY, configure_file would blank every ${VAR} it cannot resolve.
+    #
     configure_file(
         "${_metadata_file_in}"
         "${CMAKE_CURRENT_BINARY_DIR}/${_metadata_file_out}"
+        @ONLY
     )
 
     install(

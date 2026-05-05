@@ -42,7 +42,7 @@ build: configure
 install:
 	@if [ "$(IS_DEBIAN)" = "yes" ]; then \
 		$(MAKE) LOCAL_SRC=OFF deb; \
-		PKG=$$(ls -1t dist/*.deb 2>/dev/null | sort --reverse | head -n 1); \
+		PKG=$$(ls -1 dist/*.deb 2>/dev/null | sort -Vr | head -n 1); \
 		if [ -n "$$PKG" ]; then \
 			echo "Installing $$PKG"; \
 			dpkg -i "$$PKG"; \
@@ -52,7 +52,7 @@ install:
 		fi; \
 	elif [ "$(IS_REDHAT)" = "yes" ]; then \
 		$(MAKE) LOCAL_SRC=OFF rpm; \
-		PKG=$$(ls dist/*.rpm 2>/dev/null | sort --reverse | head -n 1); \
+		PKG=$$(ls -1 dist/*.rpm 2>/dev/null | sort -Vr | head -n 1); \
 		if [ -n "$$PKG" ]; then \
 			echo "Installing $$PKG"; \
 			rpm -i "$$PKG"; \
@@ -68,7 +68,7 @@ install:
 local:
 	@if [ "$(IS_DEBIAN)" = "yes" ]; then \
 		$(MAKE) LOCAL_SRC=ON deb; \
-		PKG=$$(ls -1t dist/*0.0.0*.deb 2>/dev/null | sort --reverse | head -n 1); \
+		PKG=$$(ls -1 dist/*0.0.0*.deb 2>/dev/null | sort -Vr | head -n 1); \
 		if [ -n "$$PKG" ]; then \
 			echo "Installing $$PKG"; \
 			dpkg -i "$$PKG"; \
@@ -78,7 +78,7 @@ local:
 		fi; \
 	elif [ "$(IS_REDHAT)" = "yes" ]; then \
 		$(MAKE) LOCAL_SRC=ON rpm; \
-		PKG=$$(ls dist/*0.0.0*.rpm 2>/dev/null | sort --reverse | head -n 1); \
+		PKG=$$(ls -1 dist/*0.0.0*.rpm 2>/dev/null | sort -Vr | head -n 1); \
 		if [ -n "$$PKG" ]; then \
 			echo "Installing $$PKG"; \
 			rpm -i "$$PKG"; \

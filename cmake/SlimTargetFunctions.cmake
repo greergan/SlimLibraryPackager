@@ -74,10 +74,11 @@ function(compile_targets)
             )
         endif()
 
+        message(STATUS "compile_targets: include_dir='${_inc_dir}'")
         target_include_directories(${_target}
             PUBLIC
-                $<BUILD_INTERFACE:${_src_dir}/${_inc_dir}>
-                $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/${_inc_dir}>
+                $<BUILD_INTERFACE:${_src_dir}/include>
+                $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
                 $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
         )
         message(STATUS "Applying compile options to ${_target}")
@@ -125,12 +126,6 @@ function(test_targets)
         return()
     endif()
 
-#    if(NOT _hpp_only)
-#        message(STATUS "test_targets: library target properties before compilation:")
-#        dump_target_properties(${_lower}_shared)
-#        dump_target_properties(${_lower}_static)
-#    endif()
-
     enable_testing()
 
     set(_linkages shared)
@@ -142,10 +137,11 @@ function(test_targets)
 
         add_executable(${_target} "${_test_src}")
 
+        message(STATUS "test_targets: include_dir='${_inc_dir}'")
         target_include_directories(${_target}
             PRIVATE
-                $<BUILD_INTERFACE:${_src_dir}/${_inc_dir}>
-                $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/${_inc_dir}>
+                $<BUILD_INTERFACE:${_src_dir}/include>
+                $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
         )
 
         if(NOT _hpp_only)
@@ -221,10 +217,11 @@ function(test_catch2_targets)
 
     add_executable(${_lower}_catch2_tests ${_test_sources})
 
+    message(STATUS "test_catch2_targets: include_dir='${_inc_dir}'")
     target_include_directories(${_lower}_catch2_tests
         PRIVATE
-            $<BUILD_INTERFACE:${_src_dir}/${_inc_dir}>
-            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/${_inc_dir}>
+            $<BUILD_INTERFACE:${_src_dir}/include>
+            $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     )
 
     if(NOT _hpp_only)

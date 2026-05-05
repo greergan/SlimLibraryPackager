@@ -21,8 +21,6 @@ function(make_install_artifacts)
     # --- Headers (primary + all sub-modules) --------------------------------
     # Stage configured headers under a dedicated subdirectory so they are
     # isolated from other generated files in the binary directory.
-    set(_hdr_staging "${CMAKE_CURRENT_BINARY_DIR}/include_staging")
-
     foreach(_name IN LISTS MODULE_NAMES)
         meta_get(MODULE "${_name}" header_file_in  _hdr_in)
         meta_get(MODULE "${_name}" header_file_out _hdr_out)
@@ -30,6 +28,9 @@ function(make_install_artifacts)
         meta_get(MODULE "${_name}" git_hash        _git_hash)
         meta_get(MODULE "${_name}" upper           _module)
         meta_get(MODULE "${_name}" src_dir         _src_dir)
+        meta_get(MODULE "${_name}" primary         _is_primary)
+
+        message(STATUS "make_install_artifacts: '${_name}' src_dir='${_src_dir}' is_primary='${_is_primary}' SLIM_USE_LOCAL_SOURCE='${SLIM_USE_LOCAL_SOURCE}'")
 
         if(NOT _hdr_in)
             message(FATAL_ERROR "make_install_artifacts: no header_file_in defined for '${_name}'")
@@ -37,7 +38,12 @@ function(make_install_artifacts)
 
         # For sub-modules, header_file_in is relative to their own src_dir.
         # For the primary module, fall back to CMAKE_SOURCE_DIR.
-        if(_src_dir)
+        # Sub-modules are skipped entirely when SLIM_USE_LOCAL_SOURCE is set.
+        if(NOT _is_primary)
+            if(SLIM_USE_LOCAL_SOURCE)
+                message(STATUS "make_install_artifacts: skipping sub-module header for '${_name}' (SLIM_USE_LOCAL_SOURCE)")
+                continue()
+            endif()
             set(_hdr_in_path "${_src_dir}/${_hdr_in}")
         else()
             set(_hdr_in_path "${CMAKE_SOURCE_DIR}/${_hdr_in}")
@@ -57,7 +63,7 @@ function(make_install_artifacts)
 
         configure_file(
             "${_hdr_in_path}"
-            "${_hdr_staging}/${_hdr_out}"
+            "${CMAKE_CURRENT_BINARY_DIR}/${_hdr_out}"
         )
 
         # _hdr_out is e.g. "include/slim/SlimFoo.hpp" or
@@ -68,7 +74,7 @@ function(make_install_artifacts)
         string(REGEX REPLACE "^include/" "" _hdr_install_subdir "${_hdr_install_subdir}")
 
         install(
-            FILES "${_hdr_staging}/${_hdr_out}"
+            FILES "${CMAKE_CURRENT_BINARY_DIR}/${_hdr_out}"
             DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${_hdr_install_subdir}"
         )
 

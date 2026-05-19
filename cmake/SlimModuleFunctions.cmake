@@ -85,11 +85,12 @@ endfunction()
 # _set_check_module(<NAME> <MIN_VERSION> <MAX_VERSION>)  [internal]
 # ---------------------------------------------------------------------------
 function(_set_check_module NAME MIN_VERSION MAX_VERSION)
-    meta_get(MODULE "${NAME}" primary _primary)
-    if(_primary)
+    get_primary_module(_primary_module)
+    meta_get(MODULE "${NAME}" primary _is_primary)
+    if(_is_primary)
         return()
     endif()
-    if(NOT SLIM_USE_LOCAL_SOURCE)
+    if(${_primary_module} STREQUAL "SlimCommon" AND NOT SLIM_USE_LOCAL_SOURCE)
         return()
     endif()
 

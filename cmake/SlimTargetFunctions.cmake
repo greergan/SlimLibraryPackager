@@ -42,7 +42,10 @@ function(compile_targets)
     string(REGEX MATCH "^([0-9]+)" _ "${_version}")
     set(_version_major "${CMAKE_MATCH_1}")
 
-    set(_linkages shared static)
+    set(_linkages shared)
+    if(NOT SLIM_SHARED_ONLY)
+        list(APPEND _linkages static)
+    endif()
     foreach(_linkage ${_linkages})
         set(_target ${_lower}_${_linkage})
 
@@ -110,7 +113,11 @@ function(test_targets)
 
     enable_testing()
 
-    set(_linkages shared static)
+    set(_linkages shared)
+    if(NOT SLIM_SHARED_ONLY)
+        list(APPEND _linkages static)
+    endif()
+
     foreach(_linkage ${_linkages})
         set(_target ${_lower}_test_${_linkage})
 
@@ -124,7 +131,8 @@ function(test_targets)
 
         if(NOT _hpp_only)
             target_link_libraries(${_target} PRIVATE ${_lower}_${_linkage})
-            if("${_linkage}" STREQUAL "shared" AND NOT SLIM_USE_LOCAL_SOURCE)
+
+            if("${_linkage}" STREQUAL "shared" AND NOT SLIM_USE_LOCAL_SOURCE AND NOT SLIM_SHARED_ONLY)
                 target_link_libraries(${_target} PRIVATE ${_lower}_static)
             elseif("${_linkage}" STREQUAL "static")
                 if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
@@ -191,7 +199,9 @@ function(test_catch2_targets)
 
     if(NOT _hpp_only)
         target_link_libraries(${_lower}_catch2_tests PRIVATE ${_lower}_shared)
-        target_link_libraries(${_lower}_catch2_tests PRIVATE ${_lower}_static)
+        if(NOT SLIM_SHARED_ONLY)
+            target_link_libraries(${_lower}_catch2_tests PRIVATE ${_lower}_static)
+        endif()
     endif()
 
     apply_slim_compile_options(${_lower}_catch2_tests)

@@ -201,7 +201,7 @@ function(make_packages)
         add_dependencies(dist ${_lower}_test_shared)
     endif()
 
-    if(TARGET ${_lower}_test_static)
+    if(NOT SLIM_SHARED_ONLY AND TARGET ${_lower}_test_static)
         add_dependencies(dist ${_lower}_test_static)
     endif()
 
@@ -209,7 +209,7 @@ function(make_packages)
         add_dependencies(dist ${_lower}_shared)
     endif()
 
-    if(TARGET ${_lower}_static)
+    if(NOT SLIM_SHARED_ONLY AND TARGET ${_lower}_static)
         add_dependencies(dist ${_lower}_static)
     endif()
 

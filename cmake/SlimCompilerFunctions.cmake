@@ -1,3 +1,57 @@
+# ---------------------------------------------------------------------------
+# load_slim_flags([FILE <path>])
+# Reads an optional 'slim_flags' file and propagates:
+#   SLIM_EXTRA_CPP_FLAGS  — tokens following CPP_FLAGS lines
+#   SLIM_EXTRA_LD_FLAGS   — tokens following LD_FLAGS lines
+# to the caller's scope.  Silently does nothing if the file is absent.
+# ---------------------------------------------------------------------------
+function(load_slim_flags)
+    cmake_parse_arguments(_ARG "" "FILE" "" ${ARGN})
+    if(_ARG_FILE)
+        set(_flags_file "${_ARG_FILE}")
+    else()
+        set(_flags_file "${CMAKE_SOURCE_DIR}/slim_flags")
+    endif()
+
+    if(NOT EXISTS "${_flags_file}")
+        message(STATUS "load_slim_flags: '${_flags_file}' not found, skipping")
+        return()
+    endif()
+
+    message(STATUS "load_slim_flags: reading '${_flags_file}'")
+
+    set(_cpp_flags "")
+    set(_ld_flags  "")
+
+    file(STRINGS "${_flags_file}" _lines REGEX "^[^#\n]")
+    foreach(_line IN LISTS _lines)
+        string(STRIP "${_line}" _line)
+        if("${_line}" STREQUAL "")
+            continue()
+        endif()
+
+        if(_line MATCHES "^CPP_FLAGS[ \t]+(.*)")
+            string(STRIP "${CMAKE_MATCH_1}" _val)
+            separate_arguments(_tokens UNIX_COMMAND "${_val}")
+            list(APPEND _cpp_flags ${_tokens})
+
+        elseif(_line MATCHES "^LD_FLAGS[ \t]+(.*)")
+            string(STRIP "${CMAKE_MATCH_1}" _val)
+            separate_arguments(_tokens UNIX_COMMAND "${_val}")
+            list(APPEND _ld_flags ${_tokens})
+
+        else()
+            message(WARNING "load_slim_flags: unrecognised line, skipping: '${_line}'")
+        endif()
+    endforeach()
+
+    set(SLIM_EXTRA_CPP_FLAGS "${_cpp_flags}" PARENT_SCOPE)
+    set(SLIM_EXTRA_LD_FLAGS  "${_ld_flags}"  PARENT_SCOPE)
+
+    message(STATUS "load_slim_flags: CPP_FLAGS = ${_cpp_flags}")
+    message(STATUS "load_slim_flags: LD_FLAGS  = ${_ld_flags}")
+endfunction()
+
 function(set_compiler_flags)
     set(flags "")
 

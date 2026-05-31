@@ -13,6 +13,7 @@ include(GNUInstallDirs)
 include(SlimFunctions)
 
 set_compiler_flags()
+load_slim_flags()
 define_module()
 generate_main_cpp()
 make_install_artifacts()

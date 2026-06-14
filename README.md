@@ -1,6 +1,6 @@
 # Slim Build System
 
-A Makefile triggered, CMake-based build framework for [SlimTS's](/greergan/SlimTS) C++ micro-libraries. Handles module discovery, source fetching, header generation, shared/static compilation, Catch2 testing, and DEB/RPM packaging — all driven from a consistent naming convention and a small `required_packages` file.
+A Makefile triggered, CMake-based build framework for [SlimTS](../SlimTS) C++ micro-libraries. Handles module discovery, source fetching, header generation, shared/static compilation, Catch2 testing, and DEB/RPM packaging — all driven from a consistent naming convention and a small `required_packages` file.
 
 ---
 

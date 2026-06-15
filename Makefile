@@ -99,9 +99,12 @@ rpm: build
 	cd $(BUILD_DIR) --target dist && cpack -G RPM
 
 packages:
-	$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF RELEASE_TYPE=RELEASE configure
+	@echo "Building packages"
+	$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF configure
 	$(CMAKE) --build $(BUILD_DIR) --target dist
+	@echo "Packaging DEB"
 	cd $(BUILD_DIR) && cpack -G DEB
+	@echo "Packaging RPM"
 	cd $(BUILD_DIR) && cpack -G RPM
 
 clean:

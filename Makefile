@@ -99,10 +99,11 @@ rpm: build
 	cd $(BUILD_DIR) --target dist && cpack -G RPM
 
 packages:
-	$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF configure
+	$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF RELEASE_TYPE=RELEASE configure
 	$(CMAKE) --build $(BUILD_DIR) --target dist
-	cd $(BUILD_DIR) && for f in DEB RPM; do cpack -G $$f; done
+	cd $(BUILD_DIR) && cpack -G DEB
+	cd $(BUILD_DIR) && cpack -G RPM
 
 clean:
 	rm -rf $(BUILD_DIR)
-	rm -f *.deb *.rpm
+	rm -rf dist

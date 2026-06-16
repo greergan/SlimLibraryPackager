@@ -4,6 +4,7 @@ CMAKE := cmake
 LOCAL_SRC ?= ON
 RELEASE_TYPE ?= DEBUG
 SHARED_ONLY ?= ON
+GIT_URL ?= https://codeberg.org/greergan
 
 IS_DEBIAN := $(shell test -f /etc/debian_version && echo "yes")
 IS_REDHAT := $(shell test -f /etc/redhat-release && echo "yes")
@@ -35,7 +36,8 @@ configure:
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_PREFIX) \
 		-DCPACK_OUTPUT_FILE_PREFIX=$(DIST_DIR) \
 		-DSLIM_USE_LOCAL_SOURCE=$(LOCAL_SRC) \
-		-DSLIM_SHARED_ONLY=$(SHARED_ONLY)
+		-DSLIM_SHARED_ONLY=$(SHARED_ONLY) \
+		-DSLIM_GIT_BASE=$(GIT_URL)
 
 build: configure
 	$(CMAKE) --build $(BUILD_DIR)

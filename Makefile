@@ -4,7 +4,8 @@ CMAKE := cmake
 LOCAL_SRC ?= ON
 RELEASE_TYPE ?= DEBUG
 SHARED_ONLY ?= ON
-GIT_URL ?= https://codeberg.org/greergan
+SLIM_GIT_URL ?= https://codeberg.org
+SLIM_GIT_REPO_OWNER ?= greergan
 
 IS_DEBIAN := $(shell test -f /etc/debian_version && echo "yes")
 IS_REDHAT := $(shell test -f /etc/redhat-release && echo "yes")
@@ -37,7 +38,9 @@ configure:
 		-DCPACK_OUTPUT_FILE_PREFIX=$(DIST_DIR) \
 		-DSLIM_USE_LOCAL_SOURCE=$(LOCAL_SRC) \
 		-DSLIM_SHARED_ONLY=$(SHARED_ONLY) \
-		-DSLIM_GIT_BASE=$(GIT_URL)
+		-DSLIM_GIT_URL=$(SLIM_GIT_URL) \
+		-DSLIM_GIT_REPO_OWNER=$(SLIM_GIT_REPO_OWNER)
+
 
 build: configure
 	$(CMAKE) --build $(BUILD_DIR)
@@ -102,7 +105,7 @@ rpm: build
 
 packages:
 	@echo "Building packages"
-	$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF configure
+	$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF RELEASE_TYPE=RELEASE configure
 	$(CMAKE) --build $(BUILD_DIR) --target dist
 	@echo "Packaging DEB"
 	cd $(BUILD_DIR) && cpack -G DEB

@@ -2,7 +2,7 @@
 # _set_git_repo(<NAME>)  [internal]
 # ---------------------------------------------------------------------------
 function(_set_git_repo NAME)
-  meta_set(MODULE "${NAME}" git_repo  "${SLIM_GIT_BASE}/${NAME}.git")
+  meta_set(MODULE "${NAME}" git_repo  "${SLIM_GIT_URL}/${SLIM_GIT_REPO_OWNER}/${NAME}.git")
   meta_get(MODULE "${NAME}" git_repo _repo_url)
 
   find_program(_CURL_EXEC curl)

@@ -82,6 +82,73 @@ function(_derive_module_type NAME OUT_TYPE)
 endfunction()
 
 # ---------------------------------------------------------------------------
+# _install_module_package(<NAME>)  [internal]
+# Downloads and installs the .deb package for a module that was not found
+# via pkg_check_modules, using the module's git_latest_tag as the version.
+# Builds the download URL from SLIM_GIT_URL / SLIM_GIT_REPO_OWNER, e.g.:
+#   ${SLIM_GIT_URL}/api/packages/${SLIM_GIT_REPO_OWNER}/generic/${NAME}/
+#       ${version}/${lower}-${tag}-${arch}.deb
+# Installs via 'dpkg -i' (no sudo — expected to run as root in a container),
+# then deletes the downloaded .deb regardless of install success or failure.
+# Fatal on download failure, missing dpkg, or a non-zero dpkg exit code.
+# Requires _set_git_repo(<NAME>) to have already run, since it depends on
+# the module's git_latest_tag metadata.
+# ---------------------------------------------------------------------------
+
+function(_install_module_package NAME)
+    meta_get(MODULE "${NAME}" lower           _lower)
+    meta_get(MODULE "${NAME}" git_latest_tag  _tag)
+
+    if(NOT _tag)
+        message(FATAL_ERROR "_install_module_package: no git_latest_tag for '${NAME}'")
+    endif()
+
+    # Path segment uses the bare semver; filename keeps the 'v' prefix as published.
+    string(REGEX REPLACE "^v" "" _version "${_tag}")
+
+    # Arch detection — mirrors make_packages()
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _arch)
+    if(_arch MATCHES "x86_64|amd64")
+        set(_arch_name "amd64")
+    elseif(_arch MATCHES "aarch64|arm64")
+        set(_arch_name "arm64")
+    else()
+        set(_arch_name "${_arch}")
+    endif()
+
+    set(_filename "${_lower}-${_tag}-${_arch_name}.deb")
+    set(_url "${SLIM_GIT_URL}/api/packages/${SLIM_GIT_REPO_OWNER}/generic/${NAME}/${_version}/${_filename}")
+    set(_dest "${CMAKE_BINARY_DIR}/_pkg_downloads/${_filename}")
+
+    message(STATUS "_install_module_package: downloading '${_url}'")
+    file(DOWNLOAD "${_url}" "${_dest}" STATUS _dl_status)
+    list(GET _dl_status 0 _dl_code)
+    if(NOT _dl_code EQUAL 0)
+        list(GET _dl_status 1 _dl_msg)
+        message(FATAL_ERROR "_install_module_package: download failed for '${_url}': ${_dl_msg}")
+    endif()
+
+    find_program(_DPKG_EXEC dpkg)
+    if(NOT _DPKG_EXEC)
+        message(FATAL_ERROR "_install_module_package: dpkg not found")
+    endif()
+
+    execute_process(
+        COMMAND "${_DPKG_EXEC}" -i "${_dest}"
+        RESULT_VARIABLE _dpkg_result
+        ERROR_VARIABLE  _dpkg_error
+    )
+
+    file(REMOVE "${_dest}")
+
+    if(NOT _dpkg_result EQUAL 0)
+        message(FATAL_ERROR "_install_module_package: dpkg -i failed for '${_dest}'\n${_dpkg_error}")
+    endif()
+
+    message(STATUS "_install_module_package: installed '${_filename}'")
+endfunction()
+
+# ---------------------------------------------------------------------------
 # _set_check_module(<NAME> <MIN_VERSION> <MAX_VERSION>)  [internal]
 # ---------------------------------------------------------------------------
 function(_set_check_module NAME MIN_VERSION MAX_VERSION)
@@ -107,9 +174,20 @@ function(_set_check_module NAME MIN_VERSION MAX_VERSION)
     endif()
 
     if(_constraints)
-        pkg_check_modules("${NAME}" REQUIRED ${_constraints})
+        pkg_check_modules("${NAME}" ${_constraints})
     else()
-        pkg_check_modules("${NAME}" REQUIRED "${_pkg_name}")
+        pkg_check_modules("${NAME}" "${_pkg_name}")
+    endif()
+
+    if(NOT ${NAME}_FOUND)
+        message(STATUS "_set_check_module: '${_pkg_name}' not found, installing from package registry")
+        _install_module_package("${NAME}")
+
+        if(_constraints)
+            pkg_check_modules("${NAME}" REQUIRED ${_constraints})
+        else()
+            pkg_check_modules("${NAME}" REQUIRED "${_pkg_name}")
+        endif()
     endif()
 
     find_program(_PKG_CONFIG_EXEC pkg-config)
@@ -334,8 +412,8 @@ function(define_module)
     # ---------------------------------------------------------------------
     _set_package_info("${ARGV0}" ${ARGV1} ${ARGV2} ${ARGV3})
     _set_module_headers("${ARGV0}") # keep this call high
-    _set_check_module("${ARGV0}" "${ARGV1}" "${ARGV2}")
     _set_git_repo("${ARGV0}")
+    _set_check_module("${ARGV0}" "${ARGV1}" "${ARGV2}")
     _set_dist_directory("${ARGV0}")
     _set_metadata_file("${ARGV0}")
     _set_project_description("${ARGV0}")

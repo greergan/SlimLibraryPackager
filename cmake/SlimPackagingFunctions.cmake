@@ -123,6 +123,7 @@ function(make_packages)
 
     meta_get(MODULE "${_primary}" lower       _lower)
     meta_get(MODULE "${_primary}" git_tag     _version)
+    string(REGEX REPLACE "^v" "" _version "${_version}")
     meta_get(MODULE "${_primary}" upper       _upper)
     meta_get(MODULE "${_primary}" dist_dir    _dist_dir)
     meta_get(MODULE "${_primary}" description _description)

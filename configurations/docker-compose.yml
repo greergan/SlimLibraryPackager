@@ -1,0 +1,114 @@
+services:
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:15
+    container_name: forgejo
+    ports:
+      - "80:3000"
+      - "22:2222"
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - FORGEJO__server__ROOT_URL=http://${FORGEJO_DOMAIN}
+      - FORGEJO__server__SSH_LISTEN_PORT=2222
+      - FORGEJO__server__SSH_PORT=22
+      - FORGEJO__database__DB_TYPE=postgres
+      - FORGEJO__database__HOST=db:5432
+      - FORGEJO__database__NAME=${POSTGRES_DB}
+      - FORGEJO__database__USER=${POSTGRES_USER}
+      - FORGEJO__database__PASSWD=${POSTGRES_PASSWORD}
+      - FORGEJO__database__SSL_MODE=disable
+      - FORGEJO__server__DOMAIN=${FORGEJO_DOMAIN}
+      - FORGEJO__server__SSH_DOMAIN=${FORGEJO_DOMAIN}
+      - FORGEJO__server__START_SSH_SERVER=true
+      - FORGEJO__actions__ENABLED=true
+      - FORGEJO__actions__DEFAULT_ACTIONS_URL=https://code.forgejo.org
+      - FORGEJO__security__INSTALL_LOCK=true
+      # Mailer configuration
+      - FORGEJO__mailer__ENABLED=${FORGEJO__mailer__ENABLED}
+      - FORGEJO__mailer__PROTOCOL=${FORGEJO__mailer__PROTOCOL}
+      - FORGEJO__mailer__SMTP_ADDR=${FORGEJO__mailer__SMTP_ADDR}
+      - FORGEJO__mailer__SMTP_PORT=${FORGEJO__mailer__SMTP_PORT}
+      - FORGEJO__mailer__USER=${FORGEJO__mailer__USER}
+      - FORGEJO__mailer__PASSWD=${FORGEJO__mailer__PASSWD}
+      - FORGEJO__mailer__FROM=${FORGEJO__mailer__FROM}
+      - FORGEJO__service__ENABLE_NOTIFY_MAIL=true
+    volumes:
+      - forgejo_data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - forgejo_net
+
+  db:
+    image: postgres:16-alpine
+    container_name: forgejo_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - forgejo_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  runner:
+    image: code.forgejo.org/forgejo/runner:12
+    container_name: forgejo-runner
+    restart: unless-stopped
+    user: "0:0"
+    environment:
+      - FORGEJO_RUNNER_TOKEN=${FORGEJO_RUNNER_TOKEN}
+      - FORGEJO_RUNNER_UUID=${FORGEJO_RUNNER_UUID}
+    volumes:
+      - runner_data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    command:
+      - /bin/sh
+      - -c
+      - |
+        echo "Generating Forgejo Runner v12+ configuration..."
+        cat <<EOF > /data/config.yaml
+        log:
+          level: info
+        server:
+          connections:
+            main-forgejo:
+              url: http://forgejo:3000
+              token: $${FORGEJO_RUNNER_TOKEN}
+              uuid: $${FORGEJO_RUNNER_UUID}
+              labels:
+                - self-hosted
+                - docker
+        runner:
+          name: main-runner
+          capacity: 1
+          envs:
+            DOCKER_HOST: unix:///var/run/docker.sock
+        container:
+          network: forgejo_forgejo_net
+          volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+        EOF
+        echo "Starting runner daemon..."
+        exec forgejo-runner --config /data/config.yaml daemon
+    networks:
+      - forgejo_net
+
+volumes:
+  forgejo_data:
+  postgres_data:
+  runner_data:
+
+networks:
+  forgejo_net:
+    driver: bridge

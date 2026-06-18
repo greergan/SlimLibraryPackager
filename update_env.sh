@@ -13,6 +13,7 @@ done
 
 cp "$SOURCE_DIR/LICENSE" "$TARGET_DIR"
 
-cp -r "$SOURCE_DIR/.forgejo" "$TARGET_DIR"
+mkdir -p "$TARGET_DIR/.forgejo"
+cp -r "$SOURCE_DIR/forgejo/workflows" "$TARGET_DIR/.forgejo"
 
 cp "$SOURCE_DIR/.gitignore" "$TARGET_DIR"

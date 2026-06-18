@@ -5,7 +5,7 @@ ENV SLIM_GIT_URL="http://192.168.0.73:3000"
 ENV SLIM_GIT_REPO_OWNER="greergan"
 ENV LANG="C.UTF-8"
 ENV LC_ALL="C.UTF-8"
-ENV TZ="America/Los_Angeles"   
+ENV TZ="America/Los_Angeles"
 
 # Set environment variables for non-interactive installs
 ENV DEBIAN_FRONTEND=noninteractive
@@ -21,7 +21,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         curl \
         git \
         libtool \
-        nasm \
         ninja-build \
         nodejs \
         openssh-client \
@@ -35,10 +34,3 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Install pre-commit globally via pipx
 RUN pipx install --global pre-commit
-
-# Setup vcpkg and install packages (Now with system tools ready)
-RUN git clone --depth=1 https://github.com/microsoft/vcpkg.git ${VCPKG_ROOT} \
-    && ${VCPKG_ROOT}/bootstrap-vcpkg.sh \
-    && ${VCPKG_ROOT}/vcpkg install highway boringssl \
-    && rm -rf ${VCPKG_ROOT}/buildtrees ${VCPKG_ROOT}/downloads
-

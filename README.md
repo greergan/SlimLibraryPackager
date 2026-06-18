@@ -2,7 +2,7 @@
   <img src="https://raw.githubusercontent.com/greergan/SlimTS/master/assets/slimts_logo.png" width="75" alt="SlimTS Logo">
 </a>
 
-# Slim Library Packager
+# SlimLibraryPackager
 
 A unified build system for the [SlimCommon](https://codeberg.org/greergan/SlimCommon) c++ library and its contained micro-libraries.  
 The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/SlimTS) typescript first platform.

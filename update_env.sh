@@ -12,3 +12,7 @@ for item in Makefile CMakeLists.txt cmake; do
 done
 
 cp "$SOURCE_DIR/LICENSE" "$TARGET_DIR"
+
+cp -r "$SOURCE_DIR/.forgejo" "$TARGET_DIR"
+
+cp "$SOURCE_DIR/.gitignore" "$TARGET_DIR"

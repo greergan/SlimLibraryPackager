@@ -21,7 +21,7 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
 - [Using Docker](#using-docker)
   - [Container Creation](#container-creation)
   - [Dev Containers](#dev-containers)
-    - [How It's Wired Up](#how-its-wired-up)
+    - [How It's Wired Up](#how-it-s-wired-up)
     - [Using It (VS Code)](#using-it-vs-code)
     - [Using It (Zed)](#using-it-zed)
   - [Docker Compose](#docker-compose)

@@ -129,7 +129,7 @@ docker build -t slim-toolchain:latest -f configurations/Dockerfile .
 
 ### Docker Compose
 
-This repo includes a Docker Compose stack (`configurations/docker-compose.yml`) that spins up a self-hosted [Forgejo](https://forgejo.org/) instance, its Postgres database, and a Forgejo Actions runner — useful for running the [Forgejo Workflows](#forgejo-workflows) used to build and publish the SlimCommon libraries.
+This repo includes a Docker Compose stack (`configurations/docker-compose.yml`) that spins up a self-hosted [Forgejo](https://forgejo.org/) instance, its Postgres database, and a Forgejo Actions runner — useful for running the [Forgejo Workflows](#forgejo-workflows) used to build and publish the [SlimCommon](https://codeberg.org/greergan/SlimCommon) library and micro-libraries.
 
 **Services**
 

@@ -123,7 +123,38 @@ docker build -t slim-toolchain:latest -f configurations/Dockerfile .
 
 ### Dev Containers
 
-*Add content for Dev Containers here.*
+[Dev Containers](https://containers.dev/) let you open a workspace directly inside the [`slim-toolchain`](#container-creation) build environment.
+
+Tested with
+- [Zed Dev Containers](https://zed.dev/docs/dev-containers).
+- [VS Code Dev Containers](https://code.visualstudio.com/docs/devcontainers/containers) 
+
+  
+** Configuration file
+[`configurations/devcontainer.json`](configurations/devcontainer.json)
+
+**How it's wired up**
+
+- `build.dockerfile` points at the same [`Dockerfile`](#container-creation) used for [Container Creation](#container-creation), so the dev container and the CI build environment stay in sync.
+- `runArgs` names the running container `slim-toolchain`.
+- `workspaceFolder` is `/workspace`, and `workspaceMount` bind-mounts the local repo there with `cached` consistency for better I/O performance.
+- `mounts` adds two additional bind mounts:
+  - `/product/google/v8` on the host → `/opt/v8` in the container, for prebuilt [Google V8](https://v8.dev/docs) embedder libraries.
+  - `${localEnv:HOME}/.ssh` → `/root/.ssh`, so the container can use your existing SSH keys to clone/push against Forgejo without copying credentials into the image.
+
+**Using it (VS Code)**
+
+1. Open the repo folder in VS Code with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) installed.
+2. Run **Dev Containers: Reopen in Container** from the command palette.
+3. VS Code builds the image from `configurations/Dockerfile` (or reuses it if already built) and reopens the workspace inside the `slim-toolchain` container at `/workspace`.
+
+**Using it (Zed)**
+
+1. Open the repo folder in [Zed](https://zed.dev/), which reads the same `configurations/devcontainer.json`.
+2. Run **dev containers: reopen in container** from the command palette (see [Zed's Dev Containers docs](https://zed.dev/docs/dev-containers) for current details, as support is still evolving).
+3. Zed builds (or reuses) the image from `configurations/Dockerfile` and reopens the workspace inside the `slim-toolchain` container at `/workspace`.
+
+> **Note:** `/product/google/v8` must exist on the host machine with the expected V8 build output before opening the dev container, or the mount will fail.
 
 [↑ Top](#table-of-contents)
 

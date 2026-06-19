@@ -21,6 +21,9 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
 - [Using Docker](#using-docker)
   - [Container Creation](#container-creation)
   - [Dev Containers](#dev-containers)
+    - [How It's Wired Up](#how-its-wired-up)
+    - [Using It (VS Code)](#using-it-vs-code)
+    - [Using It (Zed)](#using-it-zed)
   - [Docker Compose](#docker-compose)
 
 ## Overview
@@ -129,17 +132,18 @@ docker build -t slim-toolchain:latest -f configurations/Dockerfile .
 
 [Dev Containers](https://containers.dev/) let you open a workspace directly inside the [`slim-toolchain`](#container-creation) build environment.
 
+** [`configurations/devcontainer.json`](configurations/devcontainer.json)  
+** [`configurations/Dockerfile`](configurations/Dockerfile)
+
 Tested with
-- [Zed Dev Containers](https://zed.dev/docs/dev-containers).
-- [VS Code Dev Containers](https://code.visualstudio.com/docs/devcontainers/containers) 
+- [Zed Dev Containers](https://zed.dev/docs/dev-containers)
+- [VS Code Dev Containers](https://code.visualstudio.com/docs/devcontainers/containers)
 
-  
-** Configuration file
-[`configurations/devcontainer.json`](configurations/devcontainer.json)
+[↑ Top](#table-of-contents)
 
-**How it's wired up**
+#### How It's Wired Up
 
-- `build.dockerfile` points at the same [`Dockerfile`](#container-creation) used for [Container Creation](#container-creation), so the dev container and the CI build environment stay in sync.
+- `build.dockerfile` points at the same [`Dockerfile`](configurations/Dockerfile) used for [Container Creation](#container-creation), so the dev container and the CI build environment stay in sync.
 - `runArgs` names the running container `slim-toolchain`.
 - `workspaceFolder` is `/workspace`, and `workspaceMount` bind-mounts the local repo there with `cached` consistency for better I/O performance.
 - `mounts` adds two additional bind mounts:
@@ -147,13 +151,17 @@ Tested with
   - `${localEnv:HOME}/.ssh` → `/root/.ssh`, so the container can use your existing SSH keys to clone/push against Forgejo without copying credentials into the image. 
     - This approach is needed by the version of [Zed](https://zed.dev/) available at the time of this writing.
 
-**Using it (VS Code)**
+[↑ Top](#table-of-contents)
+
+#### Using It (VS Code)
 
 1. Open the repo folder in VS Code with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) installed.
 2. Run **Dev Containers: Reopen in Container** from the command palette.
 3. VS Code builds the image from `configurations/Dockerfile` (or reuses it if already built) and reopens the workspace inside the `slim-toolchain` container at `/workspace`.
 
-**Using it (Zed)**
+[↑ Top](#table-of-contents)
+
+#### Using It (Zed)
 
 1. Open the repo folder in [Zed](https://zed.dev/), which reads the same `configurations/devcontainer.json`.
 2. Run **dev containers: reopen in container** from the command palette (see [Zed's Dev Containers docs](https://zed.dev/docs/dev-containers) for current details, as support is still evolving).

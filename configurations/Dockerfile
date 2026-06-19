@@ -11,7 +11,6 @@ ENV TZ="America/Los_Angeles"
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Combine apt operations into one layer
-# ADDED: golang-go and perl so vcpkg can successfully build BoringSSL
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
         catch2 \

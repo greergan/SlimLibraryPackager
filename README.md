@@ -74,7 +74,11 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
 
 ## Using Docker
 
-*Add content for Using Docker here.*
+Docker is used throughout this project to keep the build toolchain reproducible across machines and CI:
+
+- [Container Creation](#container-creation) — the [`Dockerfile`](configurations/Dockerfile) defining the `slim-toolchain` image used to build [SlimCommon](https://codeberg.org/greergan/SlimCommon), its micro-libraries, and the [Google V8](https://v8.dev/docs) embedder libraries.
+- [Dev Containers](#dev-containers) — open this repo directly inside that same `slim-toolchain` image from [VS Code](https://code.visualstudio.com/docs/devcontainers/containers) or [Zed](https://zed.dev/docs/dev-containers) for local development.
+- [Docker Compose](#docker-compose) — a self-hosted [Forgejo](https://forgejo.org/) stack (server, Postgres, and Actions runner) for running the [Forgejo Workflows](#forgejo-workflows) that build and publish the libraries.
 
 [↑ Top](#table-of-contents)
 

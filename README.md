@@ -140,7 +140,8 @@ Tested with
 - `workspaceFolder` is `/workspace`, and `workspaceMount` bind-mounts the local repo there with `cached` consistency for better I/O performance.
 - `mounts` adds two additional bind mounts:
   - `/product/google/v8` on the host → `/opt/v8` in the container, for prebuilt [Google V8](https://v8.dev/docs) embedder libraries.
-  - `${localEnv:HOME}/.ssh` → `/root/.ssh`, so the container can use your existing SSH keys to clone/push against Forgejo without copying credentials into the image.
+  - `${localEnv:HOME}/.ssh` → `/root/.ssh`, so the container can use your existing SSH keys to clone/push against Forgejo without copying credentials into the image. 
+    - This approach is needed by the version of [Zed](https://zed.dev/) available at the time of this writing.
 
 **Using it (VS Code)**
 

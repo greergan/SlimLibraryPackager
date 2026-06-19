@@ -19,6 +19,7 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
   - [build.yml](#buildyml)
   - [publish.yml](#publishyml)
 - [Using Docker](#using-docker)
+  - [Container Creation](#container-creation)
   - [Dev Containers](#dev-containers)
   - [Docker Compose](#docker-compose)
 
@@ -74,6 +75,43 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
 ## Using Docker
 
 *Add content for Using Docker here.*
+
+[↑ Top](#table-of-contents)
+
+### Container Creation
+
+[`configurations/Dockerfile`](configurations/Dockerfile) builds the image used as the build environment for SlimCommon and its micro-libraries — for example, by the [build.yml](#buildyml) / [publish.yml](#publishyml) workflows running on the [Forgejo runner](#docker-compose).
+
+**Base image**
+
+Built `FROM ubuntu:26.04`.
+
+**Environment variables**
+
+| Variable | Purpose |
+| --- | --- |
+| `SLIM_GIT_URL` | Points at the local Forgejo instance (`http://forgejo`) so builds can resolve dependencies from it. |
+| `SLIM_GIT_REPO_OWNER` | Default repo owner (`greergan`) used when resolving dependency repos. |
+| `LANG` / `LC_ALL` | Pinned to `C.UTF-8` for consistent, locale-independent build output. |
+| `TZ` | Set to `America/Los_Angeles`. |
+| `DEBIAN_FRONTEND` | Set to `noninteractive` so `apt-get` never blocks waiting on prompts. |
+
+**Installed packages**
+
+All `apt-get` work is combined into a single layer to keep the image small, and the package list cache is removed afterward (`rm -rf /var/lib/apt/lists/*`). Installed packages:
+
+- `build-essential`, `cmake`, `ninja-build`, `pkg-config`, `libtool` — core C/C++ toolchain and build tooling.
+- `catch2` — the Catch2 v3 test framework used by SlimCommon's C++ test suite.
+- `git`, `openssh-client`, `curl` — source checkout and dependency fetching, including over SSH.
+- `nodejs` — needed for the Forgejo actions.
+- `rpm`, `zip`, `unzip` — packaging utilities for produced artifacts.
+
+
+**Building the image**
+
+```bash
+docker build -t slim-toolchain:latest -f configurations/Dockerfile .
+```
 
 [↑ Top](#table-of-contents)
 

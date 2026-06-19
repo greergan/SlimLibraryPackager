@@ -1,0 +1,13 @@
+{
+    "name": "Slim Dev",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "runArgs": ["--name", "slim-toolchain"],
+    "workspaceFolder": "/workspace",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+    "mounts": [
+        "source=/product/google/v8,target=/opt/v8,type=bind,consistency=cached",
+        "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,consistency=cached"
+    ]
+}

@@ -13,6 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Combine apt operations into one layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential \
+        ca-certificates \
         catch2 \
         cmake \
         curl \

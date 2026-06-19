@@ -24,6 +24,7 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
     - [How It's Wired Up](#how-it-s-wired-up)
     - [Using It (VS Code)](#using-it-vs-code)
     - [Using It (Zed)](#using-it-zed)
+    - [Workspace Directory](#workspace-directory)
   - [Docker Compose](#docker-compose)
 
 ## Overview
@@ -168,6 +169,30 @@ Tested with
 3. Zed builds (or reuses) the image from `configurations/Dockerfile` and reopens the workspace inside the `slim-toolchain` container at `/workspace`.
 
 > **Note:** `/product/google/v8` must exist on the host machine with the expected V8 build output before opening the dev container, or the mount will fail.
+
+[↑ Top](#table-of-contents)
+
+### Workspace Directory
+
+Your workspace directory must contain a sub-directory called `.devcontainer`  
+Check [SlimCommon](https://codeberg.org/greergan/SlimCommon) for a list of micro-libraries.  
+
+~~~ bash
+mkdir workspace
+git clone ssh://git@forgejo/greergan/SlimLibraryPackager.git
+
+mkdir .devcontainer
+ln -s SlimLibraryPackager/configurations/devcontainer.js .devcontainer/devcontainer.js
+ln -s SlimLibraryPackager/configurations/Dockerfile .devcontainer/Dockerfile
+
+git clone other SlimCommon library and micro-library repositories as needed
+
+# Setup library/micro-library build environment
+for d in SlimCommon*; do (cd "$d" && bash ../SlimLibraryPackager/update_env.sh); done
+
+zed workspace
+
+~~~
 
 [↑ Top](#table-of-contents)
 

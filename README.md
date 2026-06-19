@@ -80,7 +80,13 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
 
 ### Container Creation
 
-[`configurations/Dockerfile`](configurations/Dockerfile) builds the image used as the build environment for SlimCommon and its micro-libraries — for example, by the [build.yml](#buildyml) / [publish.yml](#publishyml) workflows running on the [Forgejo runner](#docker-compose).
+Required build toolchain for
+- [Forgejo Workflows](#forgejo-workflows)
+- [SlimCommon](https://codeberg.org/greergan/SlimCommon) and its micro-libraries
+- [Google V8](https://v8.dev/docs) embedder libraries
+
+** Configuration file
+[`configurations/Dockerfile`](configurations/Dockerfile)
 
 **Base image**
 
@@ -100,12 +106,12 @@ Built `FROM ubuntu:26.04`.
 
 All `apt-get` work is combined into a single layer to keep the image small, and the package list cache is removed afterward (`rm -rf /var/lib/apt/lists/*`). Installed packages:
 
-- `build-essential`, `cmake`, `ninja-build`, `pkg-config`, `libtool` — core C/C++ toolchain and build tooling.
-- `catch2` — the Catch2 v3 test framework used by SlimCommon's C++ test suite.
+- `build-essential`, `cmake`, `ninja-build`, `pkg-config`, `libtool` — builds [SlimCommon](https://codeberg.org/greergan/SlimCommon) and [Google V8](https://v8.dev/docs) libraries.
+- `ca-certificates` — root CA certificates for TLS/HTTPS connections (e.g. cloning over HTTPS, package downloads).
+- `catch2` — the Catch2 v3 test framework used by [SlimCommon](https://codeberg.org/greergan/SlimCommon)'s C++ test suite.
 - `git`, `openssh-client`, `curl` — source checkout and dependency fetching, including over SSH.
 - `nodejs` — needed for the Forgejo actions.
 - `rpm`, `zip`, `unzip` — packaging utilities for produced artifacts.
-
 
 **Building the image**
 

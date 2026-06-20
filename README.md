@@ -242,7 +242,6 @@ Required build toolchain for
 - [SlimCommon](https://codeberg.org/greergan/SlimCommon) and its micro-libraries
 - [Google V8](https://v8.dev/docs) embedder libraries
 
-** Configuration file
 [`configurations/Dockerfile`](configurations/Dockerfile)
 
 **Base image**
@@ -290,8 +289,8 @@ Tested with
 
 #### How It's Wired Up
 
-** [`configurations/devcontainer.json`](configurations/devcontainer.json)  
-** [`configurations/Dockerfile`](configurations/Dockerfile)
+[`configurations/devcontainer.json`](configurations/devcontainer.json)  
+[`configurations/Dockerfile`](configurations/Dockerfile)
 
 - `build.dockerfile` points at the same [`Dockerfile`](configurations/Dockerfile) used for [Container Creation](#container-creation), so the dev container and the CI build environment stay in sync.
 - `runArgs` names the running container `slim-toolchain`.

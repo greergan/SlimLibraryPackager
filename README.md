@@ -15,10 +15,9 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
 - [Library Setup](#library-setup)
   - [Defining Dependencies](#defining-dependencies)
   - [update_env.sh](#update_envsh)
-  - [Links and files](#links-and-files)
   - [Building a Library](#building)
 - [Forgejo Workflows](#forgejo-workflows)
-  - [Setup](#setup)
+  - [Setup](#workflow-setup)
   - [build.yml](#buildyml)
   - [publish.yml](#publishyml)
 - [Using Docker](#using-docker)
@@ -108,7 +107,21 @@ make
 
 ## Building
 
-*Add content for Building here.*
+There are several options for building a project
+* make
+* make local
+* make install
+* make packages
+
+Running [update_env.sh](#update_envsh) is a prerequisite for building.
+
+| Command | Effects |
+| --- | --- |
+| make | compiles complete project, runs tests |
+| make local | compiles complete project, runs tests, installs unversioned micro-library |
+| make install | pulls latest tagged git source, compiles complete project, runs tests, installs versioned micro-library |
+| make packages | pulls latest tagged git source, compiles complete project, runs tests and creates .deb and .rpm packages |
+**check project_root/dist for packages
 
 [↑ Top](#table-of-contents)
 
@@ -118,7 +131,7 @@ make
 
 [↑ Top](#table-of-contents)
 
-### Setup
+### Workflow Setup
 
 *Add content for Setup here.*
 

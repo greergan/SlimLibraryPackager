@@ -14,7 +14,7 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
   - [Project File List](#file-list)
 - [Library Setup](#library-setup)
   - [Defining Dependencies](#defining-dependencies)
-  - [update_env.sh](#update_envsh)
+  - [update_env.sh](#update_env)
   - [Building a Library](#building-a-library)
   - [Building SlimCommon](#building-slimcommon)
 - [Forgejo Workflows](#forgejo-workflows)
@@ -59,10 +59,10 @@ A project is defined by a set of files which are used to build, test and package
 | `src/test.cpp` | optional, used to build small program that will test functionality |
 | `tests/*.cpp` | i.e. `tests/main.cpp` - [Catch2 V3](https://github.com/catchorg/Catch2) test harness |
 | `required_packages` | Slim library, micro-library [required package definitions](#defining-dependencies) |
-| `.gitignore` | the git ignore list, provided by [update_env.sh](#update_envsh) |
-| `LICENSE` | the project license file, provided by [update_env.sh](#update_envsh) |
-| `.forgejo/workflows/build.yml` | provided by [update_env.sh](#update_envsh) |
-| `.forgejo/workflows/publish.yml` | provided by [update_env.sh](#update_envsh) |
+| `.gitignore` | the git ignore list, provided by [update_env.sh](#update_env) |
+| `LICENSE` | the project license file, provided by [update_env.sh](#update_env) |
+| `.forgejo/workflows/build.yml` | provided by [update_env.sh](#update_env) |
+| `.forgejo/workflows/publish.yml` | provided by [update_env.sh](#update_env) |
 
 [↑ Top](#table-of-contents)
 
@@ -116,13 +116,13 @@ SlimCommonMemoryMapper 1.0.0
 
 [↑ Top](#table-of-contents)
 
-## update_env.sh
+## update_env
 
 * Most importantly, this bash script links build files into your current micro-library repository directory  
 * Next most important, this bash script copies official SlimLibraryPackager workflows into your current project directory
 * It also keeps the official LICENSE file and .gitignore file in sync  
 
-**[update_env.sh](update_env.sh)
+[update_env.sh](update_env.sh)
 
 
 Run prior to building a project
@@ -145,7 +145,7 @@ There are several options for building a project
 * make install
 * make packages
 
-Running [update_env.sh](#update_envsh) is a prerequisite for building.
+Running [update_env.sh](#update_env) is a prerequisite for building.
 
 | Command | Effects |
 | --- | --- |
@@ -194,7 +194,7 @@ Runs on every push to `master`, or manually via **workflow_dispatch**. Executes 
 [`forgejo/workflows/build.yml`](forgejo/workflows/build.yml)
 
 1. Checks out the current repository and the [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager) repo (needed for `update_env.sh`).
-2. Runs [`update_env.sh`](#update_envsh) to sync build files, the workflow definitions, `LICENSE`, and `.gitignore`.
+2. Runs [`update_env.sh`](#update_env) to sync build files, the workflow definitions, `LICENSE`, and `.gitignore`.
 3. Validates that the `GIT_URL` and `REPO_OWNER` variables are set, then compiles the project and runs its tests:
 
    ```bash
@@ -213,7 +213,7 @@ Runs on pushes of tags matching `v*`, or manually via **workflow_dispatch** with
 1. Checks out the current repository at the triggering ref and the [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager) repo.
 2. Validates that the `GIT_URL` and `REPO_OWNER` variables are set.
 3. Determines the version to publish — from the manual `version` input, the `v*` tag name, or `0.0.0` as a fallback.
-4. Runs [`update_env.sh`](#update_envsh), then builds and packages the project:
+4. Runs [`update_env.sh`](#update_env), then builds and packages the project:
 
    ```bash
    make packages SLIM_GIT_URL="${{ vars.GIT_URL }}" SLIM_GIT_REPO_OWNER="${{ vars.REPO_OWNER }}"
@@ -242,6 +242,7 @@ Required build toolchain for
 - [SlimCommon](https://codeberg.org/greergan/SlimCommon) and its micro-libraries
 - [Google V8](https://v8.dev/docs) embedder libraries
 
+** Configuration file
 [`configurations/Dockerfile`](configurations/Dockerfile)
 
 **Base image**
@@ -289,8 +290,8 @@ Tested with
 
 #### How It's Wired Up
 
-[`configurations/devcontainer.json`](configurations/devcontainer.json)  
-[`configurations/Dockerfile`](configurations/Dockerfile)
+** [`configurations/devcontainer.json`](configurations/devcontainer.json)  
+** [`configurations/Dockerfile`](configurations/Dockerfile)
 
 - `build.dockerfile` points at the same [`Dockerfile`](configurations/Dockerfile) used for [Container Creation](#container-creation), so the dev container and the CI build environment stay in sync.
 - `runArgs` names the running container `slim-toolchain`.

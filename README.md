@@ -15,7 +15,7 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
 - [Library Setup](#library-setup)
   - [Defining Dependencies](#defining-dependencies)
   - [update_env.sh](#update_envsh)
-  - [Building a Library](#building)
+  - [Building a Library](#building-a-library)
 - [Forgejo Workflows](#forgejo-workflows)
   - [Setup](#workflow-setup)
   - [build.yml](#buildyml)
@@ -105,7 +105,7 @@ make
 
 [↑ Top](#table-of-contents)
 
-## Building
+## Building a Library
 
 There are several options for building a project
 * make

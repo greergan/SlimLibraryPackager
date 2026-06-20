@@ -16,6 +16,7 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
   - [Defining Dependencies](#defining-dependencies)
   - [update_env.sh](#update_envsh)
   - [Building a Library](#building-a-library)
+  - [Building SlimCommon](#building-slimcommon)
 - [Forgejo Workflows](#forgejo-workflows)
   - [Setup](#workflow-setup)
   - [build.yml](#buildyml)
@@ -67,7 +68,38 @@ A project is defined by a set of files which are used to build, test and package
 
 ## Library Setup
 
-*Add content for Library Setup here.*
+SlimCommon and its micro-libraries are all made using the same build files and workflows.  
+Follow this examples to get started.  
+
+~~~ bash
+mkdir workspace
+cd workspace
+
+git clone ssh://git@forgejo/greergan/SlimLibraryPackager.git
+
+mkdir SlimCommon[Lib[Sublib][Sublib]]
+cd project directory
+git init
+bash ../SlimLibraryPackager/update_env.sh
+
+mkdir src
+touch src/main.cpp
+
+# example: SlimCommonHttpCookieStore
+# directory: include/slim/common/http/cookie
+# file:      include/slim/common/http/cookie/store.h.in
+mkdir -p include/slim/common/cookie
+touch include/slim/common/cookie/store.h.in
+
+mkdir tests
+touch test/main.cpp
+
+git add .
+git commit -m"Initial commit"
+
+# ensure things are setup correctly to do a build
+make
+~~~
 
 [↑ Top](#table-of-contents)
 

@@ -14,6 +14,7 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
   - [Project File List](#file-list)
 - [Library Setup](#library-setup)
   - [Defining Dependencies](#defining-dependencies)
+  - [Code Testing](#code-testing)
   - [update_env.sh](#update_env)
   - [Building a Library](#building-a-library)
   - [Building SlimCommon](#building-slimcommon)
@@ -113,6 +114,56 @@ Library dependencies are found in a file called `required_packages` found in the
 SlimCommonLog
 SlimCommonMemoryMapper 1.0.0
 ~~~
+
+[↑ Top](#table-of-contents)
+
+## Code Testing
+
+Code testing is handled by [Catch2 v3](https://github.com/catchorg/Catch2). All testing code is compiled and run automatically when the project is built.  
+The following examples are based on tests found here `tests/main.cpp` in [SlimCommonHttpHeader](https://codeberg.org/greergan/SlimCommonHttpHeaders/src/branch/master/tests/main.cpp).
+
+~~~ cpp
+#include <catch2/catch_test_macros.hpp>
+
+#include <slim/common/http/headers.h>
+
+using namespace slim::common::http;
+
+TEST_CASE("Headers::append adds a new header when the key does not exist", "[headers][append]") {
+    Headers h;
+
+    SECTION("simple header") {
+        REQUIRE(h.append("Accept", "text/html") == HeaderStatus::OK);
+        REQUIRE(h.entries().size() == 1);
+
+        auto entry = h.get("Accept");
+        REQUIRE(entry != nullptr);
+        CHECK(entry->get_name() == "Accept");
+        REQUIRE(entry->get_value().size() == 1);
+        CHECK(entry->get_value()[0] == "text/html");
+    }
+
+    SECTION("invalid name does not create an entry") {
+        REQUIRE(h.append("", "text/html") == HeaderStatus::NameEmpty);
+        CHECK(h.entries().empty());
+    }
+}
+
+TEST_CASE("Headers::serialize renders entries as wire-format header lines", "[headers][serialize]") {
+    Headers h;
+    REQUIRE(h.append("Accept", "text/html") == HeaderStatus::OK);
+    REQUIRE(h.append("Accept", "application/json") == HeaderStatus::OK);
+    REQUIRE(h.append("Vary", "Accept-Encoding") == HeaderStatus::OK);
+
+    const std::string expects = "Accept: text/html, application/json\r\n"
+                                 "Vary: Accept-Encoding\r\n";
+                                 "\r\n";
+
+    CHECK(h.serialize() == expects);
+}
+~~~
+
+`make` builds the project and runs the full `tests/*.cpp` suite as part of every build.
 
 [↑ Top](#table-of-contents)
 

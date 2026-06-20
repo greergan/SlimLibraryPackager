@@ -10,9 +10,12 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
 ## Table of Contents
 
 - [Overview](#overview)
+- [Project Definition](#project-definition)
+  - [Project File List](#file-list)
 - [Library Setup](#library-setup)
-  - [Links and files](#links-and-files)
   - [Defining Dependencies](#defining-dependencies)
+  - [update_env.sh](#update_envsh)
+  - [Links and files](#links-and-files)
   - [Building a Library](#building)
 - [Forgejo Workflows](#forgejo-workflows)
   - [Setup](#setup)
@@ -34,15 +37,72 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
 
 [↑ Top](#table-of-contents)
 
-## Defining Dependencies
+## Project Definition
 
-*Add content for Defining Dependencies here.*
+A project is defined by a set of files which are used to build, test and package the [SlimCommon](https://codeberg.org/greergan/SlimCommon) c++ library and its contained micro-libraries a long with a git repository structure. Also includes a .gitignore, LICENSE and [Forgejo](https://forgejo.org/) workflows. 
+
+### File List  
+* `src/main.cpp`
+* `include/slim/common/[*]/[microlibrary].h.in`
+* `src/test.cpp`
+* `tests/*.cpp`
+* `required_packages`  
+* `.gitignore`
+* `LICENSE`
+* `.forgejo/workflows/build.yml`
+* `.forgejo/workflows/publish.yml`
+
+| File | Purpose |
+| --- | --- |
+| `src/main.cpp` | contains library code |
+| `include/slim/common/[*]/[microlibrary].h.in` | i.e. `include/slim/common/Http/Cookie/store.h.in` <br> `include/slim/common/Http/cookie.h.in` |
+| `src/test.cpp` | optional, used to build small program that will test functionality |
+| `tests/*.cpp` | i.e. `tests/main.cpp` - [Catch2 V3](https://github.com/catchorg/Catch2) test harness |
+| `required_packages` | Slim library, micro-library [required package definitions](#defining-dependencies) |
+| `.gitignore` | the git ignore list, provided by [update_env.sh](#update_envsh) |
+| `LICENSE` | the project license file, provided by [update_env.sh](#update_envsh) |
+| `.forgejo/workflows/build.yml` | provided by [update_env.sh](#update_envsh) |
+| `.forgejo/workflows/publish.yml` | provided by [update_env.sh](#update_envsh) |
 
 [↑ Top](#table-of-contents)
 
 ## Library Setup
 
 *Add content for Library Setup here.*
+
+[↑ Top](#table-of-contents)
+
+## Defining Dependencies
+
+Library dependencies are found in a file called `required_packages` found in the project root.
+
+`required_packages` file
+~~~
+# PackageName [minVersion [maxVersion]]
+SlimCommonLog
+SlimCommonMemoryMapper 1.0.0
+~~~
+
+[↑ Top](#table-of-contents)
+
+## update_env.sh
+
+* Most importantly, this bash script links build files into your current micro-library repository directory  
+* Next most important, this bash script copies official SlimLibraryPackager workflows into your current project directory
+* It also keeps the official LICENSE file and .gitignore file in sync  
+
+**[update_env.sh](update_env.sh)
+
+
+Run prior to building a project
+~~~ bash
+git clone ssh://git@forgejo/greergan/SlimLibraryPackager.git
+git clone ssh://git@forgejo/greergan/SlimCommonHttpCookie.git
+cd SlimCommonHttpCookie
+bash ../SlimLibraryPackager/update_env.sh
+make
+~~~
+
 
 [↑ Top](#table-of-contents)
 

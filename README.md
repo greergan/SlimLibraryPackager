@@ -156,7 +156,7 @@ Tested with
 
 #### Using It (VS Code)
 
-1. Open the repo folder in VS Code with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) installed.
+1. Open the [Workspace Directory](#workspace-directory) in VS Code with the [Dev Containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) installed.
 2. Run **Dev Containers: Reopen in Container** from the command palette.
 3. VS Code builds the image from `configurations/Dockerfile` (or reuses it if already built) and reopens the workspace inside the `slim-toolchain` container at `/workspace`.
 
@@ -164,7 +164,7 @@ Tested with
 
 #### Using It (Zed)
 
-1. Open the repo folder in [Zed](https://zed.dev/), which reads the same `configurations/devcontainer.json`.
+1. Open the [Workspace Directory](#workspace-directory) in [Zed](https://zed.dev/), which reads the same `configurations/devcontainer.json`.
 2. Run **dev containers: reopen in container** from the command palette (see [Zed's Dev Containers docs](https://zed.dev/docs/dev-containers) for current details, as support is still evolving).
 3. Zed builds (or reuses) the image from `configurations/Dockerfile` and reopens the workspace inside the `slim-toolchain` container at `/workspace`.
 
@@ -190,6 +190,7 @@ git clone other SlimCommon library and micro-library repositories as needed
 # Setup library/micro-library build environment
 for d in SlimCommon*; do (cd "$d" && bash ../SlimLibraryPackager/update_env.sh); done
 
+# Start your editor using the workspace directory
 zed workspace
 
 ~~~

@@ -159,25 +159,65 @@ Running [update_env.sh](#update_envsh) is a prerequisite for building.
 
 ## Forgejo Workflows
 
-*Add content for Forgejo Workflows here.*
+[Forgejo Actions](https://forgejo.org/docs/latest/user/actions/) builds and publishes [SlimCommon](https://codeberg.org/greergan/SlimCommon) and its micro-libraries using two workflows that run inside the `slim-toolchain` [container image](#container-creation) on the [self-hosted runner](#docker-compose):
+
+- [`build.yml`](#buildyml) — compiles and tests the project on every push to `master`.
+- [`publish.yml`](#publishyml) — builds and publishes versioned `.deb`/`.rpm` packages on tag pushes.
+
+Both workflows depend on repository variables and secrets configured in Forgejo — see [Setup](#workflow-setup) before running either one.
 
 [↑ Top](#table-of-contents)
 
 ### Workflow Setup
 
-*Add content for Setup here.*
+Before either workflow can run successfully, the repository variables and secrets below must be configured in Forgejo under **Settings → Actions → Variables** and **Settings → Actions → Secrets**.
+
+| Name | Type | Used In | Purpose |
+| --- | --- | --- | --- |
+| `GIT_URL` | Variable | `build.yml`, `publish.yml` | Forgejo instance URL passed to `make` as `SLIM_GIT_URL`, used to resolve micro-library dependencies. |
+| `REPO_OWNER` | Variable | `build.yml`, `publish.yml` | Default repo owner passed to `make` as `SLIM_GIT_REPO_OWNER`. |
+| `SMTP_SERVER_ADDR` | Variable | `build.yml`, `publish.yml` | SMTP server hostname used for failure-notification email. |
+| `SMTP_SERVER_PORT` | Variable | `build.yml`, `publish.yml` | SMTP server port used for failure-notification email. |
+| `SMTP_USER` | Variable | `build.yml`, `publish.yml` | SMTP username used to authenticate when sending failure-notification email. |
+| `NOTIFICATIONS_EMAIL` | Variable | `build.yml`, `publish.yml` | Recipient address for failure-notification email. |
+| `NOTIFICATIONS_FROM_EMAIL` | Variable | `build.yml`, `publish.yml` | From address for failure-notification email. |
+| `SMTP_SERVER_PASSWORD` | Secret | `build.yml`, `publish.yml` | Password/credential used to authenticate to the SMTP server. |
+| `REGISTRY_USER` | Secret | `publish.yml` | Username used to authenticate to the Forgejo package registry when publishing packages. |
+| `REGISTRY_TOKEN` | Secret | `publish.yml` | Token used to authenticate to the Forgejo package registry when publishing packages. |
 
 [↑ Top](#table-of-contents)
 
 ### build.yml
 
-*Add content for build.yml here.*
+Runs on every push to `master`, or manually via **workflow_dispatch**. Executes on the self-hosted runner inside a privileged `slim-toolchain` container.
+
+1. Checks out the current repository and the [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager) repo (needed for `update_env.sh`).
+2. Runs [`update_env.sh`](#update_envsh) to sync build files, the workflow definitions, `LICENSE`, and `.gitignore`.
+3. Validates that the `GIT_URL` and `REPO_OWNER` variables are set, then compiles the project and runs its tests:
+
+   ```bash
+   make RELEASE_TYPE=RELEASE SHARED_ONLY=OFF SLIM_GIT_URL="${{ vars.GIT_URL }}" SLIM_GIT_REPO_OWNER="${{ vars.REPO_OWNER }}"
+   ```
+4. On failure, sends a notification email using the SMTP variables/secrets from [Workflow Setup](#workflow-setup).
 
 [↑ Top](#table-of-contents)
 
 ### publish.yml
 
-*Add content for publish.yml here.*
+Runs on pushes of tags matching `v*`, or manually via **workflow_dispatch** with an optional `version` input. Executes on the self-hosted runner inside a privileged `slim-toolchain` container.
+
+1. Checks out the current repository at the triggering ref and the [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager) repo.
+2. Validates that the `GIT_URL` and `REPO_OWNER` variables are set.
+3. Determines the version to publish — from the manual `version` input, the `v*` tag name, or `0.0.0` as a fallback.
+4. Runs [`update_env.sh`](#update_envsh), then builds and packages the project:
+
+   ```bash
+   make packages SLIM_GIT_URL="${{ vars.GIT_URL }}" SLIM_GIT_REPO_OWNER="${{ vars.REPO_OWNER }}"
+   ```
+
+   This compiles, runs tests, and produces `.deb`/`.rpm` packages in `dist/`.
+5. Uploads each package in `dist/` to the Forgejo generic package registry for the repository's owner, authenticating with the `REGISTRY_USER` / `REGISTRY_TOKEN` secrets.
+6. On failure, sends a notification email using the SMTP variables/secrets from [Workflow Setup](#workflow-setup).
 
 [↑ Top](#table-of-contents)
 

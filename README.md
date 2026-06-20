@@ -133,9 +133,6 @@ docker build -t slim-toolchain:latest -f configurations/Dockerfile .
 
 [Dev Containers](https://containers.dev/) let you open a workspace directly inside the [`slim-toolchain`](#container-creation) build environment.
 
-** [`configurations/devcontainer.json`](configurations/devcontainer.json)  
-** [`configurations/Dockerfile`](configurations/Dockerfile)
-
 Tested with
 - [Zed Dev Containers](https://zed.dev/docs/dev-containers)
 - [VS Code Dev Containers](https://code.visualstudio.com/docs/devcontainers/containers)
@@ -143,6 +140,9 @@ Tested with
 [↑ Top](#table-of-contents)
 
 #### How It's Wired Up
+
+** [`configurations/devcontainer.json`](configurations/devcontainer.json)  
+** [`configurations/Dockerfile`](configurations/Dockerfile)
 
 - `build.dockerfile` points at the same [`Dockerfile`](configurations/Dockerfile) used for [Container Creation](#container-creation), so the dev container and the CI build environment stay in sync.
 - `runArgs` names the running container `slim-toolchain`.

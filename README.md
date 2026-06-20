@@ -19,8 +19,8 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
   - [Building SlimCommon](#building-slimcommon)
 - [Forgejo Workflows](#forgejo-workflows)
   - [Setup](#workflow-setup)
-  - [build.yml](#buildyml)
-  - [publish.yml](#publishyml)
+  - [build.yml](#build-workflow)
+  - [publish.yml](#publish-workflow)
 - [Using Docker](#using-docker)
   - [Container Creation](#container-creation)
   - [Dev Containers](#dev-containers)
@@ -161,8 +161,8 @@ Running [update_env.sh](#update_envsh) is a prerequisite for building.
 
 [Forgejo Actions](https://forgejo.org/docs/latest/user/actions/) builds and publishes [SlimCommon](https://codeberg.org/greergan/SlimCommon) and its micro-libraries using two workflows that run inside the `slim-toolchain` [container image](#container-creation) on the [self-hosted runner](#docker-compose):
 
-- [`build.yml`](#buildyml) — compiles and tests the project on every push to `master`.
-- [`publish.yml`](#publishyml) — builds and publishes versioned `.deb`/`.rpm` packages on tag pushes.
+- [`build.yml`](#build-workflow) — compiles and tests the project on every push to `master`.
+- [`publish.yml`](#publish-workflow) — builds and publishes versioned `.deb`/`.rpm` packages on tag pushes.
 
 Both workflows depend on repository variables and secrets configured in Forgejo — see [Setup](#workflow-setup) before running either one.
 
@@ -187,9 +187,11 @@ Before either workflow can run successfully, the repository variables and secret
 
 [↑ Top](#table-of-contents)
 
-### build.yml
+### build workflow
 
 Runs on every push to `master`, or manually via **workflow_dispatch**. Executes on the self-hosted runner inside a privileged `slim-toolchain` container.
+
+[`forgejo/workflows/build.yml`](forgejo/workflows/build.yml)
 
 1. Checks out the current repository and the [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager) repo (needed for `update_env.sh`).
 2. Runs [`update_env.sh`](#update_envsh) to sync build files, the workflow definitions, `LICENSE`, and `.gitignore`.
@@ -202,9 +204,11 @@ Runs on every push to `master`, or manually via **workflow_dispatch**. Executes 
 
 [↑ Top](#table-of-contents)
 
-### publish.yml
+### publish workflow
 
 Runs on pushes of tags matching `v*`, or manually via **workflow_dispatch** with an optional `version` input. Executes on the self-hosted runner inside a privileged `slim-toolchain` container.
+
+[`forgejo/workflows/publish.yml`](forgejo/workflows/publish.yml)
 
 1. Checks out the current repository at the triggering ref and the [SlimLibraryPackager](https://codeberg.org/greergan/SlimLibraryPackager) repo.
 2. Validates that the `GIT_URL` and `REPO_OWNER` variables are set.
@@ -390,7 +394,7 @@ All three services share a single bridge network, `forgejo_net`, and persist the
 
 **Notes**
 
-- `FORGEJO__actions__ENABLED=true` is set, so Actions (and therefore the [`build.yml`](#buildyml) / [`publish.yml`](#publishyml) workflows) are enabled out of the box.
+- `FORGEJO__actions__ENABLED=true` is set, so Actions (and therefore the [`build.yml`](#build-workflow) / [`publish.yml`](#publish-workflow) workflows) are enabled out of the box.
 - The runner container mounts `/var/run/docker.sock`, so jobs execute as sibling Docker containers on the host rather than nested inside the runner container.
 - `/etc/timezone` and `/etc/localtime` are mounted read-only into the `forgejo` container so timestamps in the UI match the host's timezone.
 - To stop the stack at any point, run `docker compose down` from the `configurations` directory. Add `-v` to also remove the named volumes (`forgejo_data`, `postgres_data`, `runner_data`) and wipe all data.

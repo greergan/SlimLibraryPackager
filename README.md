@@ -45,6 +45,7 @@ A project is defined by a set of files which are used to build, test and package
 ### File List  
 * `src/main.cpp`
 * `include/slim/common/[*]/[microlibrary].h.in`
+* `include/slim/common/[microlibrary]/*.h.in`
 * `src/test.cpp`
 * `tests/*.cpp`
 * `required_packages`  
@@ -56,7 +57,8 @@ A project is defined by a set of files which are used to build, test and package
 | File | Purpose |
 | --- | --- |
 | `src/main.cpp` | contains library code |
-| `include/slim/common/[*]/[microlibrary].h.in` | i.e. `include/slim/common/Http/Cookie/store.h.in` <br> `include/slim/common/Http/cookie.h.in` |
+| `include/slim/common/[*]/[microlibrary].h.in` | i.e. [`SlimCommonHttpCookieStore`](https://codeberg.org/greergan/SlimCommonHttpCookieStore) uses `include/slim/common/Http/Cookie/store.h.in` |
+| `include/slim/common/[microlibrary]/*.h.in` - optional | i.e. [`SlimCommonHttp`](https://codeberg.org/greergan/SlimCommonHttp) uses `include/slim/common/http/*.h.in` |
 | `src/test.cpp` | optional, used to build small program that will test functionality |
 | `tests/*.cpp` | i.e. `tests/main.cpp` - [Catch2 V3](https://github.com/catchorg/Catch2) test harness |
 | `required_packages` | Slim library, micro-library [required package definitions](#defining-dependencies) |

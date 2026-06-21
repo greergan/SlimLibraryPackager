@@ -17,6 +17,8 @@ function(make_install_artifacts)
     meta_get(MODULE "${_module_name}" metadata_file_in  _metadata_file_in)
     meta_get(MODULE "${_module_name}" metadata_file_out _metadata_file_out)
 
+    string(REGEX REPLACE "^v" "" _pc_version "${_version}")
+
     # --- Headers (primary + all sub-modules) --------------------------------
     # Stage configured headers under a dedicated subdirectory so they are
     # isolated from other generated files in the binary directory.

@@ -5,7 +5,7 @@ libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
 
 Name: @_module_name@
 Description: @_description@
-Version: @_version@
+Version: @_pc_version@
 URL: @_git_repo@
 Cflags: -I${includedir}
 Libs:

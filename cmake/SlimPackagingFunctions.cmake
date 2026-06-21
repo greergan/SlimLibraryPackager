@@ -23,6 +23,9 @@ function(make_install_artifacts)
     foreach(_name IN LISTS MODULE_NAMES)
         meta_get(MODULE "${_name}" header_file_in  _hdr_in)
         meta_get(MODULE "${_name}" header_file_out _hdr_out)
+        meta_get(MODULE "${_name}" header_file_in_optional _hdr_in_optional)
+        meta_get(MODULE "${_name}" extra_header_files_in   _extra_hdr_in)
+        meta_get(MODULE "${_name}" extra_header_files_out  _extra_hdr_out)
         meta_get(MODULE "${_name}" git_tag         _git_tag)
         meta_get(MODULE "${_name}" git_hash        _git_hash)
         meta_get(MODULE "${_name}" upper           _module)
@@ -31,13 +34,14 @@ function(make_install_artifacts)
 
         message(STATUS "make_install_artifacts: '${_name}' src_dir='${_src_dir}' is_primary='${_is_primary}' SLIM_USE_LOCAL_SOURCE='${SLIM_USE_LOCAL_SOURCE}'")
 
-        if(NOT _hdr_in)
-            message(FATAL_ERROR "make_install_artifacts: no header_file_in defined for '${_name}'")
+        if(NOT _hdr_in AND NOT _extra_hdr_in)
+            message(FATAL_ERROR "make_install_artifacts: no header_file_in or extra_header_files_in defined for '${_name}'")
         endif()
 
         # For sub-modules, header_file_in is relative to their own src_dir.
         # For the primary module, fall back to CMAKE_SOURCE_DIR.
         # Sub-modules are skipped entirely when SLIM_USE_LOCAL_SOURCE is set.
+        set(_skip_primary_header FALSE)
         if(NOT _is_primary)
             if(SLIM_USE_LOCAL_SOURCE)
                 message(STATUS "make_install_artifacts: skipping sub-module header for '${_name}' (SLIM_USE_LOCAL_SOURCE)")
@@ -46,17 +50,13 @@ function(make_install_artifacts)
             if(${_module_name} STREQUAL "SlimCommon")
                 set(_hdr_in_path "${_src_dir}/${_hdr_in}")
             else()
-                continue()
+                set(_skip_primary_header TRUE)
             endif()
         else()
             set(_hdr_in_path "${CMAKE_SOURCE_DIR}/${_hdr_in}")
         endif()
 
-        if(NOT EXISTS "${_hdr_in_path}")
-            message(FATAL_ERROR "make_install_artifacts: header_file_in not found: '${_hdr_in_path}'")
-        endif()
-
-        # Variables substituted into the header template:
+        # Variables substituted into header templates:
         #   @SLIMFOO_VERSION@  and  @SLIMFOO_GIT_HASH@
         set(${_module}_VERSION  "${_git_tag}")
         set(${_module}_GIT_HASH "${_git_hash}")
@@ -64,24 +64,83 @@ function(make_install_artifacts)
         message(STATUS "make_install_artifacts: ${_module}_VERSION  = ${${_module}_VERSION}")
         message(STATUS "make_install_artifacts: ${_module}_GIT_HASH = ${${_module}_GIT_HASH}")
 
-        configure_file(
-            "${_hdr_in_path}"
-            "${CMAKE_CURRENT_BINARY_DIR}/${_hdr_out}"
-        )
+        # --- Single header_file_in/out -------------------------------------
+        # Required unless the module flagged it optional (because the
+        # secondary glob directory below already supplied headers) or this
+        # is a non-"SlimCommon"-primary sub-module (existing behavior).
+        if(NOT _skip_primary_header)
+            if(NOT _hdr_in)
+                if(NOT _hdr_in_optional)
+                    message(FATAL_ERROR "make_install_artifacts: no header_file_in defined for '${_name}'")
+                endif()
+            elseif(NOT EXISTS "${_hdr_in_path}")
+                if(_hdr_in_optional)
+                    message(STATUS "make_install_artifacts: header_file_in not found, skipping (optional, extra headers present): '${_hdr_in_path}'")
+                else()
+                    message(FATAL_ERROR "make_install_artifacts: header_file_in not found: '${_hdr_in_path}'")
+                endif()
+            else()
+                configure_file(
+                    "${_hdr_in_path}"
+                    "${CMAKE_CURRENT_BINARY_DIR}/${_hdr_out}"
+                )
 
-        # _hdr_out is e.g. "include/slim/SlimFoo.hpp" or
-        # "include/slim/common/bar/baz.h".  Strip the leading "include/" segment
-        # so the final installed path is:
-        #   <prefix>/<CMAKE_INSTALL_INCLUDEDIR>/slim/SlimFoo.hpp
-        cmake_path(GET _hdr_out PARENT_PATH _hdr_install_subdir)
-        string(REGEX REPLACE "^include/" "" _hdr_install_subdir "${_hdr_install_subdir}")
+                # _hdr_out is e.g. "include/slim/SlimFoo.hpp" or
+                # "include/slim/common/bar/baz.h".  Strip the leading "include/" segment
+                # so the final installed path is:
+                #   <prefix>/<CMAKE_INSTALL_INCLUDEDIR>/slim/SlimFoo.hpp
+                cmake_path(GET _hdr_out PARENT_PATH _hdr_install_subdir)
+                string(REGEX REPLACE "^include/" "" _hdr_install_subdir "${_hdr_install_subdir}")
 
-        install(
-            FILES "${CMAKE_CURRENT_BINARY_DIR}/${_hdr_out}"
-            DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${_hdr_install_subdir}"
-        )
+                install(
+                    FILES "${CMAKE_CURRENT_BINARY_DIR}/${_hdr_out}"
+                    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${_hdr_install_subdir}"
+                )
 
-        message(STATUS "make_install_artifacts: header configured for '${_name}'")
+                message(STATUS "make_install_artifacts: header configured for '${_name}'")
+            endif()
+        endif()
+
+        # --- Secondary directory of headers (extra_header_files_in/out) ---
+        # e.g. include/slim/common/http/*.h.in for SlimCommonHttp, or
+        # include/slim/common/http/cookie/*.h.in for SlimCommonHttpCookie.
+        # Each matched header is configured and installed the same way as
+        # the single header above. Silently does nothing if the module has
+        # no extra headers.
+        if(_extra_hdr_in AND NOT _skip_primary_header)
+            list(LENGTH _extra_hdr_in _extra_count)
+            math(EXPR _extra_last_idx "${_extra_count} - 1")
+            foreach(_idx RANGE ${_extra_last_idx})
+                list(GET _extra_hdr_in  ${_idx} _one_hdr_in)
+                list(GET _extra_hdr_out ${_idx} _one_hdr_out)
+
+                if(_is_primary)
+                    set(_one_hdr_in_path "${CMAKE_SOURCE_DIR}/${_one_hdr_in}")
+                else()
+                    set(_one_hdr_in_path "${_src_dir}/${_one_hdr_in}")
+                endif()
+
+                if(NOT EXISTS "${_one_hdr_in_path}")
+                    message(FATAL_ERROR "make_install_artifacts: extra_header_files_in entry not found: '${_one_hdr_in_path}'")
+                endif()
+
+                configure_file(
+                    "${_one_hdr_in_path}"
+                    "${CMAKE_CURRENT_BINARY_DIR}/${_one_hdr_out}"
+                )
+
+                cmake_path(GET _one_hdr_out PARENT_PATH _one_hdr_install_subdir)
+                string(REGEX REPLACE "^include/" "" _one_hdr_install_subdir "${_one_hdr_install_subdir}")
+
+                install(
+                    FILES "${CMAKE_CURRENT_BINARY_DIR}/${_one_hdr_out}"
+                    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${_one_hdr_install_subdir}"
+                )
+
+                message(STATUS "make_install_artifacts: extra header configured for '${_name}': '${_one_hdr_in}'")
+            endforeach()
+        endif()
+
     endforeach()
 
     # --- pkg-config metadata ----------------------------------------------

@@ -274,12 +274,14 @@ function(_set_module_headers NAME)
         if(_word_count EQUAL 1)
             set(_hdr_in  "include/slim/common/${_word0}.h.in")
             set(_inc_dir "include/slim/common")
+            set(_extra_dir "include/slim/common/${_word0}")
             meta_set(MODULE "${NAME}" header_prefix "${_word0}")
         elseif(_word_count EQUAL 2)
             list(GET _words 1 _word1)
             string(TOLOWER "${_word1}" _word1)
             set(_hdr_in  "include/slim/common/${_word0}/${_word1}.h.in")
             set(_inc_dir "include/slim/common/${_word0}")
+            set(_extra_dir "include/slim/common/${_word0}/${_word1}")
             meta_set(MODULE "${NAME}" header_prefix "${_word1}")
         elseif(_word_count EQUAL 3)
             list(GET _words 1 _word1)
@@ -288,12 +290,47 @@ function(_set_module_headers NAME)
             string(TOLOWER "${_word2}" _word2)
             set(_hdr_in  "include/slim/common/${_word0}/${_word1}/${_word2}.h.in")
             set(_inc_dir "include/slim/common/${_word0}/${_word1}")
+            set(_extra_dir "include/slim/common/${_word0}/${_word1}/${_word2}")
             meta_set(MODULE "${NAME}" header_prefix "${_word2}")
         endif()
         string(REGEX REPLACE "\.in$" "" _hdr_out "${_hdr_in}")
         meta_set(MODULE "${NAME}" header_file_in  "${_hdr_in}")
         meta_set(MODULE "${NAME}" header_file_out "${_hdr_out}")
         meta_set(MODULE "${NAME}" include_dir     "${_inc_dir}")
+
+        # --- Secondary directory of header files ---------------------------
+        # In addition to the single header_file_in above, a module may keep
+        # multiple headers in a same-named subdirectory, e.g. for
+        # SlimCommonHttp:       include/slim/common/http/*.h.in
+        # SlimCommonHttpCookie: include/slim/common/http/cookie/*.h.in
+        # This check is optional: if the directory doesn't exist, or contains
+        # no '*.h.in' files, it is silently skipped and header_file_in remains
+        # as set above (and required, as before).
+        set(_extra_hdr_in  "")
+        set(_extra_hdr_out "")
+        set(_extra_dir_full "${CMAKE_SOURCE_DIR}/${_extra_dir}")
+        if(EXISTS "${_extra_dir_full}")
+            file(GLOB _extra_hdr_matches RELATIVE "${CMAKE_SOURCE_DIR}" "${_extra_dir_full}/*.h.in")
+            list(SORT _extra_hdr_matches)
+            foreach(_match IN LISTS _extra_hdr_matches)
+                string(REGEX REPLACE "\.in$" "" _match_out "${_match}")
+                list(APPEND _extra_hdr_in  "${_match}")
+                list(APPEND _extra_hdr_out "${_match_out}")
+            endforeach()
+        endif()
+
+        if(_extra_hdr_in)
+            message(STATUS "_set_module_headers: '${NAME}' found ${_extra_dir}/*.h.in: ${_extra_hdr_in}")
+        endif()
+
+        meta_set(MODULE "${NAME}" extra_header_files_in  "${_extra_hdr_in}")
+        meta_set(MODULE "${NAME}" extra_header_files_out "${_extra_hdr_out}")
+
+        # When the secondary directory supplied at least one header, the
+        # primary single header_file_in becomes optional rather than required.
+        if(_extra_hdr_in)
+            meta_set(MODULE "${NAME}" header_file_in_optional ON)
+        endif()
 
     endif()
 

@@ -29,7 +29,7 @@ The Slim build system derives everything it needs from a few conventions:
 - **Dependencies** are declared in a `required_packages` file at the repo root.
 - **Module type** is inferred from the name prefix (`SlimCommon`, `Slim<Lib>`, `SlimCommon<Lib><Sub>`).
 - **Git tags and hashes** are resolved automatically at configure time from GitHub.
-- **Headers** are generated from `.h.in` / `.hpp.in` templates with version metadata substituted in.
+- **Headers** are generated from `.h.in` / `.hpp.in` templates with version metadata substituted in. A sub-module may supply a single `<microlibrary>.h.in`, multiple headers in a same-named subdirectory (`<microlibrary>/*.h.in`), or both — see [Module Metadata System](#module-metadata-system).
 
 Two source modes are supported, selected via `-DSLIM_USE_LOCAL_SOURCE`:
 
@@ -78,6 +78,8 @@ Names that don't match one of these patterns are rejected at configure time with
 ├── include/
 │   └── slim/
 │       └── ...                      # Generated / hand-written headers
+│       # i.e. include/slim/common/[*]/[microlibrary].h.in
+│       # or   include/slim/common/[microlibrary]/*.h.in (optional, see below)
 ├── src/
 │   ├── main.cpp                     # Auto-generated for SlimCommon
 │   └── test.cpp                     # Optional manual test driver
@@ -168,7 +170,20 @@ Because CMake functions create a new variable scope, call `_propagate_module(<NA
 
 Fields written per module:
 
-`primary`, `upper`, `lower`, `description`, `git_tag`, `git_hash`, `git_repo`, `git_repo_found`, `git_latest_tag`, `hpp_only`, `min_version`, `max_version`, `found_version`, `header_prefix`, `header_file_in`, `header_file_out`, `include_dir`, `metadata_file_in`, `metadata_file_out`, `pkg_CFLAGS`, `pkg_LDFLAGS`, `pkg_LIBRARIES`, `pkg_INCLUDE_DIRS`, `pkg_LIBRARY_DIRS`, `using_local_src`, `src_dir`, `dist_dir`
+`primary`, `upper`, `lower`, `description`, `git_tag`, `git_hash`, `git_repo`, `git_repo_found`, `git_latest_tag`, `hpp_only`, `min_version`, `max_version`, `found_version`, `header_prefix`, `header_file_in`, `header_file_out`, `header_file_in_optional`, `extra_header_files_in`, `extra_header_files_out`, `include_dir`, `metadata_file_in`, `metadata_file_out`, `pkg_CFLAGS`, `pkg_LDFLAGS`, `pkg_LIBRARIES`, `pkg_INCLUDE_DIRS`, `pkg_LIBRARY_DIRS`, `using_local_src`, `src_dir`, `dist_dir`
+
+### Header layout for `SlimCommon<Lib>` / `SlimCommon<Lib><Sub>` modules
+
+These sub-modules support two (non-exclusive) header layouts:
+
+| Layout | Example (`SlimCommonHttp`) | Fields populated |
+|---|---|---|
+| Single header | `include/slim/common/http.h.in` | `header_file_in`, `header_file_out` |
+| Multi-file directory (optional) | `include/slim/common/http/*.h.in` | `extra_header_files_in`, `extra_header_files_out` |
+
+`_set_module_headers()` always computes the single-header fields first. It then checks the same-named subdirectory for `*.h.in` files; if any are found, they're recorded in `extra_header_files_in` / `extra_header_files_out` (sorted, paired by index) and `header_file_in_optional` is set, which tells `make_install_artifacts()` it's fine if `header_file_in` doesn't exist on disk. If the subdirectory is absent or empty, the single header remains required as before.
+
+`make_install_artifacts()` configures and installs every entry in `extra_header_files_in` / `out` the same way it handles the single header — `configure_file()` then `install(FILES ...)` with the leading `include/` segment stripped from the destination path.
 
 ---
 
@@ -246,7 +261,7 @@ Open the project in VS Code and select **Dev Containers: Reopen in Container**. 
 | `compile_targets()` | `SlimTargetFunctions` | Creates shared (and optionally static) library targets |
 | `test_targets()` | `SlimTargetFunctions` | Compiles `src/test.cpp` against the built libraries |
 | `test_catch2_targets()` | `SlimTargetFunctions` | Globs `tests/*.cpp` and wires up Catch2 + CTest |
-| `make_install_artifacts()` | `SlimPackagingFunctions` | Installs headers, `.pc` file, and export targets |
+| `make_install_artifacts()` | `SlimPackagingFunctions` | Installs headers (single and/or multi-file), `.pc` file, and export targets |
 | `make_packages()` | `SlimPackagingFunctions` | Sets all `CPACK_*` vars and registers the `dist` target |
 | `dump_target_properties(TARGET)` | `SlimTargetFunctions` | Prints common target properties to STATUS output |
 | `meta_set(PREFIX NAME KEY VAL)` | `SlimMetaFunctions` | Stores a key-value pair for a named module |

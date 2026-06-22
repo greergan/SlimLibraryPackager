@@ -3,6 +3,7 @@ set(_EMPTY_SENTINEL "__EMPTY__")
 include(SlimMetaFunctions)
 include(SlimGitFunctions)
 include(SlimLoadRequiredPackages)
+include(SlimExternalPackages)
 
 # ---------------------------------------------------------------------------
 # apply_module_flags(<TARGET>)
@@ -10,30 +11,30 @@ include(SlimLoadRequiredPackages)
 # and pkg_LIBRARIES from each non-primary module to the given target.
 # ---------------------------------------------------------------------------
 function(apply_module_flags TARGET)
-    foreach(_name IN LISTS MODULE_NAMES)
-        meta_get(MODULE "${_name}" primary _is_primary)
-        if(_is_primary)
-            continue()
-        endif()
+  foreach(_name IN LISTS MODULE_NAMES)
+    meta_get(MODULE "${_name}" primary _is_primary)
+    if(_is_primary)
+      continue()
+    endif()
 
-        meta_get(MODULE "${_name}" pkg_CFLAGS      _cflags)
-        meta_get(MODULE "${_name}" pkg_LDFLAGS     _ldflags)
-        meta_get(MODULE "${_name}" pkg_INCLUDE_DIRS _inc_dirs)
-        meta_get(MODULE "${_name}" pkg_LIBRARIES   _libs)
+    meta_get(MODULE "${_name}" pkg_CFLAGS      _cflags)
+    meta_get(MODULE "${_name}" pkg_LDFLAGS     _ldflags)
+    meta_get(MODULE "${_name}" pkg_INCLUDE_DIRS _inc_dirs)
+    meta_get(MODULE "${_name}" pkg_LIBRARIES   _libs)
 
-        if(_cflags)
-            target_compile_options(${TARGET} PRIVATE ${_cflags})
-        endif()
+    if(_cflags)
+      target_compile_options(${TARGET} PRIVATE ${_cflags})
+    endif()
 
-        if(_inc_dirs)
-            target_include_directories(${TARGET} PRIVATE ${_inc_dirs})
-        endif()
+    if(_inc_dirs)
+      target_include_directories(${TARGET} PRIVATE ${_inc_dirs})
+    endif()
 
-        if(_ldflags OR _libs)
-            target_link_options(${TARGET} PRIVATE ${_ldflags})
-            target_link_libraries(${TARGET} PRIVATE ${_libs})
-        endif()
-    endforeach()
+    if(_ldflags OR _libs)
+      target_link_options(${TARGET} PRIVATE ${_ldflags})
+      target_link_libraries(${TARGET} PRIVATE ${_libs})
+    endif()
+  endforeach()
 endfunction()
 
 # ---------------------------------------------------------------------------
@@ -41,44 +42,44 @@ endfunction()
 # Returns the name of the primary module, or empty string if none found.
 # ---------------------------------------------------------------------------
 function(get_primary_module OUT_VAR)
-    foreach(_name IN LISTS MODULE_NAMES)
-        meta_get(MODULE "${_name}" primary _is_primary)
-        if(_is_primary)
-            set(${OUT_VAR} "${_name}" PARENT_SCOPE)
-            return()
-        endif()
-    endforeach()
-    set(${OUT_VAR} "" PARENT_SCOPE)
+  foreach(_name IN LISTS MODULE_NAMES)
+    meta_get(MODULE "${_name}" primary _is_primary)
+    if(_is_primary)
+      set(${OUT_VAR} "${_name}" PARENT_SCOPE)
+      return()
+    endif()
+  endforeach()
+  set(${OUT_VAR} "" PARENT_SCOPE)
 endfunction()
 
 # ---------------------------------------------------------------------------
 # _derive_module_type(<NAME> <OUT_TYPE>)  [internal]
 # ---------------------------------------------------------------------------
 function(_derive_module_type NAME OUT_TYPE)
-    if("${NAME}" STREQUAL "SlimCommon")
-        set(${OUT_TYPE} "SlimCommon" PARENT_SCOPE)
+  if("${NAME}" STREQUAL "SlimCommon")
+    set(${OUT_TYPE} "SlimCommon" PARENT_SCOPE)
 
-    elseif("${NAME}" MATCHES "^SlimCommon[A-Z]")
-        string(REGEX REPLACE "^SlimCommon" "" _suffix "${NAME}")
-        string(REGEX MATCHALL "[A-Z][a-z0-9]*" _words "${_suffix}")
-        list(LENGTH _words _word_count)
-        if(_word_count LESS 1 OR _word_count GREATER 3)
-            message(FATAL_ERROR "define_module: '${NAME}' must have 1, 2, or 3 words after 'SlimCommon' (got ${_word_count}).")
-        endif()
-        set(${OUT_TYPE} "SlimCommonOtherlibSublib" PARENT_SCOPE)
-
-    elseif("${NAME}" MATCHES "^Slim[A-Z]")
-        string(REGEX REPLACE "^Slim" "" _suffix "${NAME}")
-        string(REGEX MATCHALL "[A-Z][a-z0-9]*" _words "${_suffix}")
-        list(LENGTH _words _word_count)
-        if(NOT _word_count EQUAL 1)
-            message(FATAL_ERROR "define_module: '${NAME}' must have exactly 1 word after 'Slim' (got ${_word_count}).")
-        endif()
-        set(${OUT_TYPE} "SlimLib" PARENT_SCOPE)
-
-    else()
-        message(FATAL_ERROR "define_module: '${NAME}' does not match any known module type. Must start with 'Slim'.")
+  elseif("${NAME}" MATCHES "^SlimCommon[A-Z]")
+    string(REGEX REPLACE "^SlimCommon" "" _suffix "${NAME}")
+    string(REGEX MATCHALL "[A-Z][a-z0-9]*" _words "${_suffix}")
+    list(LENGTH _words _word_count)
+    if(_word_count LESS 1 OR _word_count GREATER 3)
+      message(FATAL_ERROR "define_module: '${NAME}' must have 1, 2, or 3 words after 'SlimCommon' (got ${_word_count}).")
     endif()
+    set(${OUT_TYPE} "SlimCommonOtherlibSublib" PARENT_SCOPE)
+
+  elseif("${NAME}" MATCHES "^Slim[A-Z]")
+    string(REGEX REPLACE "^Slim" "" _suffix "${NAME}")
+    string(REGEX MATCHALL "[A-Z][a-z0-9]*" _words "${_suffix}")
+    list(LENGTH _words _word_count)
+    if(NOT _word_count EQUAL 1)
+      message(FATAL_ERROR "define_module: '${NAME}' must have exactly 1 word after 'Slim' (got ${_word_count}).")
+    endif()
+    set(${OUT_TYPE} "SlimLib" PARENT_SCOPE)
+
+  else()
+    message(FATAL_ERROR "define_module: '${NAME}' does not match any known module type. Must start with 'Slim'.")
+  endif()
 endfunction()
 
 # ---------------------------------------------------------------------------
@@ -96,116 +97,116 @@ endfunction()
 # ---------------------------------------------------------------------------
 
 function(_install_module_package NAME)
-    meta_get(MODULE "${NAME}" lower           _lower)
-    meta_get(MODULE "${NAME}" git_latest_tag  _tag)
+  meta_get(MODULE "${NAME}" lower           _lower)
+  meta_get(MODULE "${NAME}" git_latest_tag  _tag)
 
-    if(NOT _tag)
-        message(FATAL_ERROR "_install_module_package: no git_latest_tag for '${NAME}'")
-    endif()
+  if(NOT _tag)
+    message(FATAL_ERROR "_install_module_package: no git_latest_tag for '${NAME}'")
+  endif()
 
-    # Path segment uses the bare semver; filename keeps the 'v' prefix as published.
-    string(REGEX REPLACE "^v" "" _version "${_tag}")
+  # Path segment uses the bare semver; filename keeps the 'v' prefix as published.
+  string(REGEX REPLACE "^v" "" _version "${_tag}")
 
-    # Arch detection — mirrors make_packages()
-    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _arch)
-    if(_arch MATCHES "x86_64|amd64")
-        set(_arch_name "amd64")
-    elseif(_arch MATCHES "aarch64|arm64")
-        set(_arch_name "arm64")
-    else()
-        set(_arch_name "${_arch}")
-    endif()
+  # Arch detection — mirrors make_packages()
+  string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" _arch)
+  if(_arch MATCHES "x86_64|amd64")
+    set(_arch_name "amd64")
+  elseif(_arch MATCHES "aarch64|arm64")
+    set(_arch_name "arm64")
+  else()
+    set(_arch_name "${_arch}")
+  endif()
 
-    set(_filename "${_lower}-${_tag}-${_arch_name}.deb")
-    set(_url "${SLIM_GIT_URL}/api/packages/${SLIM_GIT_REPO_OWNER}/generic/${NAME}/${_version}/${_filename}")
-    set(_dest "${CMAKE_BINARY_DIR}/_pkg_downloads/${_filename}")
+  set(_filename "${_lower}-${_tag}-${_arch_name}.deb")
+  set(_url "${SLIM_GIT_URL}/api/packages/${SLIM_GIT_REPO_OWNER}/generic/${NAME}/${_version}/${_filename}")
+  set(_dest "${CMAKE_BINARY_DIR}/_pkg_downloads/${_filename}")
 
-    message(STATUS "_install_module_package: downloading '${_url}'")
-    file(DOWNLOAD "${_url}" "${_dest}" STATUS _dl_status)
-    list(GET _dl_status 0 _dl_code)
-    if(NOT _dl_code EQUAL 0)
-        list(GET _dl_status 1 _dl_msg)
-        message(FATAL_ERROR "_install_module_package: download failed for '${_url}': ${_dl_msg}")
-    endif()
+  message(STATUS "_install_module_package: downloading '${_url}'")
+  file(DOWNLOAD "${_url}" "${_dest}" STATUS _dl_status)
+  list(GET _dl_status 0 _dl_code)
+  if(NOT _dl_code EQUAL 0)
+    list(GET _dl_status 1 _dl_msg)
+    message(FATAL_ERROR "_install_module_package: download failed for '${_url}': ${_dl_msg}")
+  endif()
 
-    find_program(_DPKG_EXEC dpkg)
-    if(NOT _DPKG_EXEC)
-        message(FATAL_ERROR "_install_module_package: dpkg not found")
-    endif()
+  find_program(_DPKG_EXEC dpkg)
+  if(NOT _DPKG_EXEC)
+    message(FATAL_ERROR "_install_module_package: dpkg not found")
+  endif()
 
-    execute_process(
+  execute_process(
         COMMAND "${_DPKG_EXEC}" -i "${_dest}"
         RESULT_VARIABLE _dpkg_result
         ERROR_VARIABLE  _dpkg_error
     )
 
-    file(REMOVE "${_dest}")
+  file(REMOVE "${_dest}")
 
-    if(NOT _dpkg_result EQUAL 0)
-        message(FATAL_ERROR "_install_module_package: dpkg -i failed for '${_dest}'\n${_dpkg_error}")
-    endif()
+  if(NOT _dpkg_result EQUAL 0)
+    message(FATAL_ERROR "_install_module_package: dpkg -i failed for '${_dest}'\n${_dpkg_error}")
+  endif()
 
-    message(STATUS "_install_module_package: installed '${_filename}'")
+  message(STATUS "_install_module_package: installed '${_filename}'")
 endfunction()
 
 # ---------------------------------------------------------------------------
 # _set_check_module(<NAME> <MIN_VERSION> <MAX_VERSION>)  [internal]
 # ---------------------------------------------------------------------------
 function(_set_check_module NAME MIN_VERSION MAX_VERSION)
-    get_primary_module(_primary_module)
-    meta_get(MODULE "${NAME}" primary _is_primary)
-    if(_is_primary)
-        return()
-    endif()
-    if(${_primary_module} STREQUAL "SlimCommon" AND NOT SLIM_USE_LOCAL_SOURCE)
-        return()
-    endif()
+  get_primary_module(_primary_module)
+  meta_get(MODULE "${NAME}" primary _is_primary)
+  if(_is_primary)
+    return()
+  endif()
+  if(${_primary_module} STREQUAL "SlimCommon" AND NOT SLIM_USE_LOCAL_SOURCE)
+    return()
+  endif()
 
-    find_package(PkgConfig REQUIRED)
+  find_package(PkgConfig REQUIRED)
 
-    meta_get(MODULE "${NAME}" lower _pkg_name)
+  meta_get(MODULE "${NAME}" lower _pkg_name)
 
-    set(_constraints "")
-    if(NOT "${MIN_VERSION}" STREQUAL "${_EMPTY_SENTINEL}" AND NOT "${MIN_VERSION}" STREQUAL "")
-        list(APPEND _constraints "${_pkg_name}>=${MIN_VERSION}")
-    endif()
-    if(NOT "${MAX_VERSION}" STREQUAL "${_EMPTY_SENTINEL}" AND NOT "${MAX_VERSION}" STREQUAL "")
-        list(APPEND _constraints "${_pkg_name}<=${MAX_VERSION}")
-    endif()
+  set(_constraints "")
+  if(NOT "${MIN_VERSION}" STREQUAL "${_EMPTY_SENTINEL}" AND NOT "${MIN_VERSION}" STREQUAL "")
+    list(APPEND _constraints "${_pkg_name}>=${MIN_VERSION}")
+  endif()
+  if(NOT "${MAX_VERSION}" STREQUAL "${_EMPTY_SENTINEL}" AND NOT "${MAX_VERSION}" STREQUAL "")
+    list(APPEND _constraints "${_pkg_name}<=${MAX_VERSION}")
+  endif()
+
+  if(_constraints)
+    pkg_check_modules("${NAME}" ${_constraints})
+  else()
+    pkg_check_modules("${NAME}" "${_pkg_name}")
+  endif()
+
+  if(NOT ${NAME}_FOUND)
+    message(STATUS "_set_check_module: '${_pkg_name}' not found, installing from package registry")
+    _install_module_package("${NAME}")
 
     if(_constraints)
-        pkg_check_modules("${NAME}" ${_constraints})
+      pkg_check_modules("${NAME}" REQUIRED ${_constraints})
     else()
-        pkg_check_modules("${NAME}" "${_pkg_name}")
+      pkg_check_modules("${NAME}" REQUIRED "${_pkg_name}")
     endif()
+  endif()
 
-    if(NOT ${NAME}_FOUND)
-        message(STATUS "_set_check_module: '${_pkg_name}' not found, installing from package registry")
-        _install_module_package("${NAME}")
-
-        if(_constraints)
-            pkg_check_modules("${NAME}" REQUIRED ${_constraints})
-        else()
-            pkg_check_modules("${NAME}" REQUIRED "${_pkg_name}")
-        endif()
-    endif()
-
-    find_program(_PKG_CONFIG_EXEC pkg-config)
-    if(_PKG_CONFIG_EXEC)
-        execute_process(
+  find_program(_PKG_CONFIG_EXEC pkg-config)
+  if(_PKG_CONFIG_EXEC)
+    execute_process(
             COMMAND "${_PKG_CONFIG_EXEC}" --modversion "${_pkg_name}"
             OUTPUT_VARIABLE "${NAME}_RESOLVED_VERSION"
             OUTPUT_STRIP_TRAILING_WHITESPACE
             ERROR_QUIET
         )
-    endif()
+  endif()
 
-    foreach(KEY IN ITEMS CFLAGS LDFLAGS LIBRARIES INCLUDE_DIRS LIBRARY_DIRS VERSION)
-        meta_set(MODULE "${NAME}" "pkg_${KEY}" "${${NAME}_${KEY}}")
-    endforeach()
+  foreach(KEY IN ITEMS CFLAGS LDFLAGS LIBRARIES INCLUDE_DIRS LIBRARY_DIRS VERSION)
+    meta_set(MODULE "${NAME}" "pkg_${KEY}" "${${NAME}_${KEY}}")
+  endforeach()
 
-    meta_set(MODULE "${NAME}" found_version "${${NAME}_RESOLVED_VERSION}")
-    _propagate_module("${NAME}")
+  meta_set(MODULE "${NAME}" found_version "${${NAME}_RESOLVED_VERSION}")
+  _propagate_module("${NAME}")
 endfunction()
 
 # ---------------------------------------------------------------------------
@@ -214,149 +215,149 @@ endfunction()
 # to the build directory.
 # ---------------------------------------------------------------------------
 function(_set_dist_directory NAME)
-    meta_get(MODULE "${NAME}" primary _is_primary)
-    if(NOT _is_primary)
-        message(WARNING "_set_dist_directory: '${NAME}' is not a primary module")
-        return()
-    endif()
+  meta_get(MODULE "${NAME}" primary _is_primary)
+  if(NOT _is_primary)
+    message(WARNING "_set_dist_directory: '${NAME}' is not a primary module")
+    return()
+  endif()
 
-    cmake_path(GET CMAKE_BINARY_DIR PARENT_PATH _build_parent)
-    meta_set(MODULE "${NAME}" dist_dir "${_build_parent}/dist")
-    _propagate_module("${NAME}")
+  cmake_path(GET CMAKE_BINARY_DIR PARENT_PATH _build_parent)
+  meta_set(MODULE "${NAME}" dist_dir "${_build_parent}/dist")
+  _propagate_module("${NAME}")
 
-    message(STATUS "_set_dist_directory: ${NAME}.dist_dir=${_build_parent}/dist")
+  message(STATUS "_set_dist_directory: ${NAME}.dist_dir=${_build_parent}/dist")
 endfunction()
 
 # ---------------------------------------------------------------------------
 # _set_metadata_file(<NAME>)  [internal]
 # ---------------------------------------------------------------------------
 function(_set_metadata_file NAME)
-    meta_get(MODULE "${NAME}" hpp_only _hpp_only)
-    meta_get(MODULE "${NAME}" lower    _metadata_file_name)
+  meta_get(MODULE "${NAME}" hpp_only _hpp_only)
+  meta_get(MODULE "${NAME}" lower    _metadata_file_name)
 
-    if(_hpp_only)
-        meta_set(MODULE "${NAME}" metadata_file_in "cmake/slim_header_lib.pc.in")
-    else()
-        meta_set(MODULE "${NAME}" metadata_file_in "cmake/slim_common_lib.pc.in")
-    endif()
-    meta_set(MODULE "${NAME}" metadata_file_out "${_metadata_file_name}.pc")
-    _propagate_module("${NAME}")
+  if(_hpp_only)
+    meta_set(MODULE "${NAME}" metadata_file_in "cmake/slim_header_lib.pc.in")
+  else()
+    meta_set(MODULE "${NAME}" metadata_file_in "cmake/slim_common_lib.pc.in")
+  endif()
+  meta_set(MODULE "${NAME}" metadata_file_out "${_metadata_file_name}.pc")
+  _propagate_module("${NAME}")
 endfunction()
 
 # ---------------------------------------------------------------------------
 # _set_module_headers(<NAME>)  [internal]
 # ---------------------------------------------------------------------------
 function(_set_module_headers NAME)
-    _derive_module_type("${NAME}" _type)
+  _derive_module_type("${NAME}" _type)
 
-    if("${_type}" STREQUAL "SlimCommon")
-        meta_set(MODULE "${NAME}" header_prefix "common")
-        meta_set(MODULE "${NAME}" header_file_in  "include/slim/common.h.in")
-        meta_set(MODULE "${NAME}" header_file_out "include/slim/common.h")
-        meta_set(MODULE "${NAME}" include_dir     "include/slim")
+  if("${_type}" STREQUAL "SlimCommon")
+    meta_set(MODULE "${NAME}" header_prefix "common")
+    meta_set(MODULE "${NAME}" header_file_in  "include/slim/common.h.in")
+    meta_set(MODULE "${NAME}" header_file_out "include/slim/common.h")
+    meta_set(MODULE "${NAME}" include_dir     "include/slim")
 
-    elseif("${_type}" STREQUAL "SlimLib")
-        meta_set(MODULE "${NAME}" hpp_only ON)
-        set(_hdr_in "include/slim/${NAME}.hpp.in")
-        string(REGEX REPLACE "\.in$" "" _hdr_out "${_hdr_in}")
-        meta_set(MODULE "${NAME}" header_prefix   "${NAME}")
-        meta_set(MODULE "${NAME}" header_file_in  "${_hdr_in}")
-        meta_set(MODULE "${NAME}" header_file_out "${_hdr_out}")
-        meta_set(MODULE "${NAME}" include_dir     "include/slim")
+  elseif("${_type}" STREQUAL "SlimLib")
+    meta_set(MODULE "${NAME}" hpp_only ON)
+    set(_hdr_in "include/slim/${NAME}.hpp.in")
+    string(REGEX REPLACE "\.in$" "" _hdr_out "${_hdr_in}")
+    meta_set(MODULE "${NAME}" header_prefix   "${NAME}")
+    meta_set(MODULE "${NAME}" header_file_in  "${_hdr_in}")
+    meta_set(MODULE "${NAME}" header_file_out "${_hdr_out}")
+    meta_set(MODULE "${NAME}" include_dir     "include/slim")
 
-    elseif("${_type}" STREQUAL "SlimCommonOtherlibSublib")
-        string(REGEX REPLACE "^SlimCommon" "" _suffix "${NAME}")
-        string(REGEX MATCHALL "[A-Z][a-z0-9]*" _words "${_suffix}")
-        list(GET _words 0 _word0)
-        string(TOLOWER "${_word0}" _word0)
-        list(LENGTH _words _word_count)
+  elseif("${_type}" STREQUAL "SlimCommonOtherlibSublib")
+    string(REGEX REPLACE "^SlimCommon" "" _suffix "${NAME}")
+    string(REGEX MATCHALL "[A-Z][a-z0-9]*" _words "${_suffix}")
+    list(GET _words 0 _word0)
+    string(TOLOWER "${_word0}" _word0)
+    list(LENGTH _words _word_count)
 
-        if(_word_count EQUAL 1)
-            set(_hdr_in  "include/slim/common/${_word0}.h.in")
-            set(_inc_dir "include/slim/common")
-            set(_extra_dir "include/slim/common/${_word0}")
-            meta_set(MODULE "${NAME}" header_prefix "${_word0}")
-        elseif(_word_count EQUAL 2)
-            list(GET _words 1 _word1)
-            string(TOLOWER "${_word1}" _word1)
-            set(_hdr_in  "include/slim/common/${_word0}/${_word1}.h.in")
-            set(_inc_dir "include/slim/common/${_word0}")
-            set(_extra_dir "include/slim/common/${_word0}/${_word1}")
-            meta_set(MODULE "${NAME}" header_prefix "${_word1}")
-        elseif(_word_count EQUAL 3)
-            list(GET _words 1 _word1)
-            list(GET _words 2 _word2)
-            string(TOLOWER "${_word1}" _word1)
-            string(TOLOWER "${_word2}" _word2)
-            set(_hdr_in  "include/slim/common/${_word0}/${_word1}/${_word2}.h.in")
-            set(_inc_dir "include/slim/common/${_word0}/${_word1}")
-            set(_extra_dir "include/slim/common/${_word0}/${_word1}/${_word2}")
-            meta_set(MODULE "${NAME}" header_prefix "${_word2}")
-        endif()
-        string(REGEX REPLACE "\.in$" "" _hdr_out "${_hdr_in}")
-        meta_set(MODULE "${NAME}" header_file_in  "${_hdr_in}")
-        meta_set(MODULE "${NAME}" header_file_out "${_hdr_out}")
-        meta_set(MODULE "${NAME}" include_dir     "${_inc_dir}")
+    if(_word_count EQUAL 1)
+      set(_hdr_in  "include/slim/common/${_word0}.h.in")
+      set(_inc_dir "include/slim/common")
+      set(_extra_dir "include/slim/common/${_word0}")
+      meta_set(MODULE "${NAME}" header_prefix "${_word0}")
+    elseif(_word_count EQUAL 2)
+      list(GET _words 1 _word1)
+      string(TOLOWER "${_word1}" _word1)
+      set(_hdr_in  "include/slim/common/${_word0}/${_word1}.h.in")
+      set(_inc_dir "include/slim/common/${_word0}")
+      set(_extra_dir "include/slim/common/${_word0}/${_word1}")
+      meta_set(MODULE "${NAME}" header_prefix "${_word1}")
+    elseif(_word_count EQUAL 3)
+      list(GET _words 1 _word1)
+      list(GET _words 2 _word2)
+      string(TOLOWER "${_word1}" _word1)
+      string(TOLOWER "${_word2}" _word2)
+      set(_hdr_in  "include/slim/common/${_word0}/${_word1}/${_word2}.h.in")
+      set(_inc_dir "include/slim/common/${_word0}/${_word1}")
+      set(_extra_dir "include/slim/common/${_word0}/${_word1}/${_word2}")
+      meta_set(MODULE "${NAME}" header_prefix "${_word2}")
+    endif()
+    string(REGEX REPLACE "\.in$" "" _hdr_out "${_hdr_in}")
+    meta_set(MODULE "${NAME}" header_file_in  "${_hdr_in}")
+    meta_set(MODULE "${NAME}" header_file_out "${_hdr_out}")
+    meta_set(MODULE "${NAME}" include_dir     "${_inc_dir}")
 
-        # --- Secondary directory of header files ---------------------------
-        # In addition to the single header_file_in above, a module may keep
-        # multiple headers in a same-named subdirectory, e.g. for
-        # SlimCommonHttp:       include/slim/common/http/*.h.in
-        # SlimCommonHttpCookie: include/slim/common/http/cookie/*.h.in
-        # This check is optional: if the directory doesn't exist, or contains
-        # no '*.h.in' files, it is silently skipped and header_file_in remains
-        # as set above (and required, as before).
-        set(_extra_hdr_in  "")
-        set(_extra_hdr_out "")
-        set(_extra_dir_full "${CMAKE_SOURCE_DIR}/${_extra_dir}")
-        if(EXISTS "${_extra_dir_full}")
-            file(GLOB _extra_hdr_matches RELATIVE "${CMAKE_SOURCE_DIR}" "${_extra_dir_full}/*.h.in")
-            list(SORT _extra_hdr_matches)
-            foreach(_match IN LISTS _extra_hdr_matches)
-                string(REGEX REPLACE "\.in$" "" _match_out "${_match}")
-                list(APPEND _extra_hdr_in  "${_match}")
-                list(APPEND _extra_hdr_out "${_match_out}")
-            endforeach()
-        endif()
-
-        if(_extra_hdr_in)
-            message(STATUS "_set_module_headers: '${NAME}' found ${_extra_dir}/*.h.in: ${_extra_hdr_in}")
-        endif()
-
-        meta_set(MODULE "${NAME}" extra_header_files_in  "${_extra_hdr_in}")
-        meta_set(MODULE "${NAME}" extra_header_files_out "${_extra_hdr_out}")
-
-        # When the secondary directory supplied at least one header, the
-        # primary single header_file_in becomes optional rather than required.
-        if(_extra_hdr_in)
-            meta_set(MODULE "${NAME}" header_file_in_optional ON)
-        endif()
-
+    # --- Secondary directory of header files ---------------------------
+    # In addition to the single header_file_in above, a module may keep
+    # multiple headers in a same-named subdirectory, e.g. for
+    # SlimCommonHttp:       include/slim/common/http/*.h.in
+    # SlimCommonHttpCookie: include/slim/common/http/cookie/*.h.in
+    # This check is optional: if the directory doesn't exist, or contains
+    # no '*.h.in' files, it is silently skipped and header_file_in remains
+    # as set above (and required, as before).
+    set(_extra_hdr_in  "")
+    set(_extra_hdr_out "")
+    set(_extra_dir_full "${CMAKE_SOURCE_DIR}/${_extra_dir}")
+    if(EXISTS "${_extra_dir_full}")
+      file(GLOB _extra_hdr_matches RELATIVE "${CMAKE_SOURCE_DIR}" "${_extra_dir_full}/*.h.in")
+      list(SORT _extra_hdr_matches)
+      foreach(_match IN LISTS _extra_hdr_matches)
+        string(REGEX REPLACE "\.in$" "" _match_out "${_match}")
+        list(APPEND _extra_hdr_in  "${_match}")
+        list(APPEND _extra_hdr_out "${_match_out}")
+      endforeach()
     endif()
 
-    _propagate_module("${NAME}")
+    if(_extra_hdr_in)
+      message(STATUS "_set_module_headers: '${NAME}' found ${_extra_dir}/*.h.in: ${_extra_hdr_in}")
+    endif()
+
+    meta_set(MODULE "${NAME}" extra_header_files_in  "${_extra_hdr_in}")
+    meta_set(MODULE "${NAME}" extra_header_files_out "${_extra_hdr_out}")
+
+    # When the secondary directory supplied at least one header, the
+    # primary single header_file_in becomes optional rather than required.
+    if(_extra_hdr_in)
+      meta_set(MODULE "${NAME}" header_file_in_optional ON)
+    endif()
+
+  endif()
+
+  _propagate_module("${NAME}")
 endfunction()
 
 # ---------------------------------------------------------------------------
 # _set_package_info(<NAME>)  [internal]
 # ---------------------------------------------------------------------------
 function(_set_package_info NAME)
-    string(TOUPPER "${NAME}" _upper)
-    string(TOLOWER "${NAME}" _lower)
-    meta_set(MODULE "${NAME}" upper "${_upper}")
-    meta_set(MODULE "${NAME}" lower "${_lower}")
+  string(TOUPPER "${NAME}" _upper)
+  string(TOLOWER "${NAME}" _lower)
+  meta_set(MODULE "${NAME}" upper "${_upper}")
+  meta_set(MODULE "${NAME}" lower "${_lower}")
 
-    if(ARGC GREATER 3 AND "${ARGV3}" STREQUAL "ON")
-        meta_set(MODULE "${NAME}" primary ON)
-    endif()
+  if(ARGC GREATER 3 AND "${ARGV3}" STREQUAL "ON")
+    meta_set(MODULE "${NAME}" primary ON)
+  endif()
 
-    if(ARGC GREATER 1 AND NOT "${ARGV1}" STREQUAL "")
-        meta_set(MODULE "${NAME}" min_version   "${ARGV1}")
-    endif()
-    if(ARGC GREATER 2 AND NOT "${ARGV2}" STREQUAL "")
-        meta_set(MODULE "${NAME}" max_version   "${ARGV2}")
-    endif()
-    _propagate_module("${NAME}")
+  if(ARGC GREATER 1 AND NOT "${ARGV1}" STREQUAL "")
+    meta_set(MODULE "${NAME}" min_version   "${ARGV1}")
+  endif()
+  if(ARGC GREATER 2 AND NOT "${ARGV2}" STREQUAL "")
+    meta_set(MODULE "${NAME}" max_version   "${ARGV2}")
+  endif()
+  _propagate_module("${NAME}")
 endfunction()
 
 # ---------------------------------------------------------------------------
@@ -365,95 +366,96 @@ endfunction()
 # for hpp-only vs compiled modules. Fails if NAME is not provided.
 # ---------------------------------------------------------------------------
 function(_set_project_description NAME)
-    if("${NAME}" STREQUAL "")
-        message(FATAL_ERROR "_set_project_description: NAME must be provided.")
-    endif()
+  if("${NAME}" STREQUAL "")
+    message(FATAL_ERROR "_set_project_description: NAME must be provided.")
+  endif()
 
-    meta_get(MODULE "${NAME}" hpp_only _hpp_only)
+  meta_get(MODULE "${NAME}" hpp_only _hpp_only)
 
-    if(_hpp_only)
-        meta_set(MODULE "${NAME}" description "${NAME} Header Only Library")
-    else()
-        meta_set(MODULE "${NAME}" description "${NAME} C++ Library")
-    endif()
+  if(_hpp_only)
+    meta_set(MODULE "${NAME}" description "${NAME} Header Only Library")
+  else()
+    meta_set(MODULE "${NAME}" description "${NAME} C++ Library")
+  endif()
 
-    _propagate_module("${NAME}")
+  _propagate_module("${NAME}")
 endfunction()
 
 # ---------------------------------------------------------------------------
 # _set_source_info(<NAME>)  [internal]
 # ---------------------------------------------------------------------------
 function(_set_source_info NAME)
-    meta_get(MODULE "${NAME}" primary _primary)
+  meta_get(MODULE "${NAME}" primary _primary)
 
-    if(_primary)
-        if(SLIM_USE_LOCAL_SOURCE)
-            meta_set(MODULE "${NAME}" using_local_src "ON")
-            meta_set(MODULE "${NAME}" src_dir "${CMAKE_SOURCE_DIR}")
-        else()
-            meta_get(MODULE "${NAME}" git_repo       _repo_url)
-            meta_get(MODULE "${NAME}" git_latest_tag _git_tag)
-
-            include(FetchContent)
-            FetchContent_Declare(
-                "${NAME}"
-                GIT_REPOSITORY "${_repo_url}"
-                GIT_TAG        "${_git_tag}"
-            )
-            FetchContent_MakeAvailable("${NAME}")
-
-            string(TOLOWER "${NAME}" _lower)
-            meta_set(MODULE "${NAME}" src_dir "${${_lower}_SOURCE_DIR}")
-        endif()
+  if(_primary)
+    if(SLIM_USE_LOCAL_SOURCE)
+      meta_set(MODULE "${NAME}" using_local_src "ON")
+      meta_set(MODULE "${NAME}" src_dir "${CMAKE_SOURCE_DIR}")
     else()
-        if(NOT SLIM_USE_LOCAL_SOURCE)
-            meta_get(MODULE "${NAME}" git_repo       _repo_url)
-            meta_get(MODULE "${NAME}" git_latest_tag _git_tag)
+      meta_get(MODULE "${NAME}" git_repo       _repo_url)
+      meta_get(MODULE "${NAME}" git_latest_tag _git_tag)
 
-            include(FetchContent)
-            FetchContent_Declare(
+      include(FetchContent)
+      FetchContent_Declare(
                 "${NAME}"
                 GIT_REPOSITORY "${_repo_url}"
                 GIT_TAG        "${_git_tag}"
             )
-            FetchContent_MakeAvailable("${NAME}")
+      FetchContent_MakeAvailable("${NAME}")
 
-            string(TOLOWER "${NAME}" _lower)
-            meta_set(MODULE "${NAME}" src_dir "${${_lower}_SOURCE_DIR}")
-        endif()
+      string(TOLOWER "${NAME}" _lower)
+      meta_set(MODULE "${NAME}" src_dir "${${_lower}_SOURCE_DIR}")
     endif()
+  else()
+    if(NOT SLIM_USE_LOCAL_SOURCE)
+      meta_get(MODULE "${NAME}" git_repo       _repo_url)
+      meta_get(MODULE "${NAME}" git_latest_tag _git_tag)
 
-    _propagate_module("${NAME}")
+      include(FetchContent)
+      FetchContent_Declare(
+                "${NAME}"
+                GIT_REPOSITORY "${_repo_url}"
+                GIT_TAG        "${_git_tag}"
+            )
+      FetchContent_MakeAvailable("${NAME}")
+
+      string(TOLOWER "${NAME}" _lower)
+      meta_set(MODULE "${NAME}" src_dir "${${_lower}_SOURCE_DIR}")
+    endif()
+  endif()
+
+  _propagate_module("${NAME}")
 endfunction()
 
 # -------------------------------------------------------------------------------
 # define_module([NAME] [min_version] [max_version] [ON])
-#   No args: derives name from CMAKE_SOURCE_DIR and auto-loads required_packages.
+#   No args: derives name from CMAKE_SOURCE_DIR and auto-loads required_packages
+#            and external_dependencies.
 # -------------------------------------------------------------------------------
 function(define_module)
-    # ------------------------------------------------------------------
-    # No-arg branch: primary module derived from CMAKE_SOURCE_DIR
-    # ------------------------------------------------------------------
-    if(ARGC EQUAL 0)
-        cmake_path(GET CMAKE_SOURCE_DIR FILENAME NAME)
+  # ------------------------------------------------------------------
+  # No-arg branch: primary module derived from CMAKE_SOURCE_DIR
+  # ------------------------------------------------------------------
+  if(ARGC EQUAL 0)
+    cmake_path(GET CMAKE_SOURCE_DIR FILENAME NAME)
 
-        define_module("${NAME}" "${_EMPTY_SENTINEL}" "${_EMPTY_SENTINEL}" ON)
-        set(REQUIRED_PACKAGE_FILE "${CMAKE_SOURCE_DIR}/required_packages")
-        _load_required_packages(${REQUIRED_PACKAGE_FILE})
-        _propagate_module("${NAME}")
-        return()
-    endif()
+    define_module("${NAME}" "${_EMPTY_SENTINEL}" "${_EMPTY_SENTINEL}" ON)
+    _load_required_packages("${CMAKE_SOURCE_DIR}/required_packages")
+    _load_external_dependencies("${CMAKE_SOURCE_DIR}/external_dependencies")
+    _propagate_module("${NAME}")
+    return()
+  endif()
 
-    # ---------------------------------------------------------------------
-    # Re-entrant branch: compute and store all derived fields incrementally
-    # ---------------------------------------------------------------------
-    _set_package_info("${ARGV0}" ${ARGV1} ${ARGV2} ${ARGV3})
-    _set_module_headers("${ARGV0}") # keep this call high
-    _set_git_repo("${ARGV0}")
-    _set_check_module("${ARGV0}" "${ARGV1}" "${ARGV2}")
-    _set_dist_directory("${ARGV0}")
-    _set_metadata_file("${ARGV0}")
-    _set_project_description("${ARGV0}")
-    _set_source_info("${ARGV0}")
-    _propagate_module("${ARGV0}")
+  # ---------------------------------------------------------------------
+  # Re-entrant branch: compute and store all derived fields incrementally
+  # ---------------------------------------------------------------------
+  _set_package_info("${ARGV0}" ${ARGV1} ${ARGV2} ${ARGV3})
+  _set_module_headers("${ARGV0}") # keep this call high
+  _set_git_repo("${ARGV0}")
+  _set_check_module("${ARGV0}" "${ARGV1}" "${ARGV2}")
+  _set_dist_directory("${ARGV0}")
+  _set_metadata_file("${ARGV0}")
+  _set_project_description("${ARGV0}")
+  _set_source_info("${ARGV0}")
+  _propagate_module("${ARGV0}")
 endfunction()

@@ -6,6 +6,7 @@ ENV SLIM_GIT_REPO_OWNER="greergan"
 ENV LANG="C.UTF-8"
 ENV LC_ALL="C.UTF-8"
 ENV TZ="America/Los_Angeles"
+ENV PATH="/root/.local/bin:${PATH}"
 
 # Set environment variables for non-interactive installs
 ENV DEBIAN_FRONTEND=noninteractive
@@ -23,8 +24,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ninja-build \
         nodejs \
         openssh-client \
+        pipx \
         pkg-config \
+        python3 \
         rpm \
         zip \
         unzip \
     && rm -rf /var/lib/apt/lists/*
+
+RUN pipx install oikb

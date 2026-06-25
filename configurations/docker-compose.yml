@@ -107,28 +107,10 @@ services:
     networks:
       - forgejo_net
 
-  open-webui:
-    image: ghcr.io/open-webui/open-webui:main
-    container_name: open-webui
-    restart: unless-stopped
-    ports:
-      - "8080:8080"
-    environment:
-      - OLLAMA_BASE_URL=http://192.168.0.80:11434
-      - WEBUI_AUTH=true
-      - ENABLE_BASE_MODELS_CACHE=false
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - open-webui-data:/app/backend/data
-    networks:
-      - forgejo_net
-
 volumes:
   forgejo_data:
   postgres_data:
   runner_data:
-  open-webui-data:
 
 networks:
   forgejo_net:

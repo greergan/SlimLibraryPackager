@@ -63,8 +63,8 @@ function(_derive_module_type NAME OUT_TYPE)
     string(REGEX REPLACE "^SlimCommon" "" _suffix "${NAME}")
     string(REGEX MATCHALL "[A-Z][a-z0-9]*" _words "${_suffix}")
     list(LENGTH _words _word_count)
-    if(_word_count LESS 1 OR _word_count GREATER 3)
-      message(FATAL_ERROR "define_module: '${NAME}' must have 1, 2, or 3 words after 'SlimCommon' (got ${_word_count}).")
+    if(_word_count LESS 1)
+      message(FATAL_ERROR "define_module: '${NAME}' must have at least 1 word after 'SlimCommon' (got ${_word_count}).")
     endif()
     set(${OUT_TYPE} "SlimCommonOtherlibSublib" PARENT_SCOPE)
 
@@ -268,32 +268,36 @@ function(_set_module_headers NAME)
   elseif("${_type}" STREQUAL "SlimCommonOtherlibSublib")
     string(REGEX REPLACE "^SlimCommon" "" _suffix "${NAME}")
     string(REGEX MATCHALL "[A-Z][a-z0-9]*" _words "${_suffix}")
-    list(GET _words 0 _word0)
-    string(TOLOWER "${_word0}" _word0)
     list(LENGTH _words _word_count)
 
-    if(_word_count EQUAL 1)
-      set(_hdr_in  "include/slim/common/${_word0}.h.in")
-      set(_inc_dir "include/slim/common")
-      set(_extra_dir "include/slim/common/${_word0}")
-      meta_set(MODULE "${NAME}" header_prefix "${_word0}")
-    elseif(_word_count EQUAL 2)
-      list(GET _words 1 _word1)
-      string(TOLOWER "${_word1}" _word1)
-      set(_hdr_in  "include/slim/common/${_word0}/${_word1}.h.in")
-      set(_inc_dir "include/slim/common/${_word0}")
-      set(_extra_dir "include/slim/common/${_word0}/${_word1}")
-      meta_set(MODULE "${NAME}" header_prefix "${_word1}")
-    elseif(_word_count EQUAL 3)
-      list(GET _words 1 _word1)
-      list(GET _words 2 _word2)
-      string(TOLOWER "${_word1}" _word1)
-      string(TOLOWER "${_word2}" _word2)
-      set(_hdr_in  "include/slim/common/${_word0}/${_word1}/${_word2}.h.in")
-      set(_inc_dir "include/slim/common/${_word0}/${_word1}")
-      set(_extra_dir "include/slim/common/${_word0}/${_word1}/${_word2}")
-      meta_set(MODULE "${NAME}" header_prefix "${_word2}")
-    endif()
+    # Lowercase every word, e.g. for SlimCommonHttpUrlSearchParams:
+    #   _words = Http;Url;Search;Params  ->  http;url;search;params
+    set(_lower_words "")
+    foreach(_w IN LISTS _words)
+      string(TOLOWER "${_w}" _w_lower)
+      list(APPEND _lower_words "${_w_lower}")
+    endforeach()
+
+    # All words but the last form the directory path under include/slim/common;
+    # the last word is the header filename and header_prefix, e.g.:
+    #   1 word  (Http):                       include/slim/common/http.h.in
+    #   2 words (Http, Cookie):                include/slim/common/http/cookie.h.in
+    #   3 words (Http, Cookie, Store):         include/slim/common/http/cookie/store.h.in
+    #   4 words (Http, Url, Search, Params):   include/slim/common/http/url/search/params.h.in
+    math(EXPR _last_index "${_word_count} - 1")
+    list(GET _lower_words ${_last_index} _last_word)
+
+    set(_dir_words "${_lower_words}")
+    list(REMOVE_AT _dir_words ${_last_index})
+
+    set(_inc_dir "include/slim/common")
+    foreach(_dw IN LISTS _dir_words)
+      string(APPEND _inc_dir "/${_dw}")
+    endforeach()
+
+    set(_hdr_in    "${_inc_dir}/${_last_word}.h.in")
+    set(_extra_dir "${_inc_dir}/${_last_word}")
+    meta_set(MODULE "${NAME}" header_prefix "${_last_word}")
     string(REGEX REPLACE "\.in$" "" _hdr_out "${_hdr_in}")
     meta_set(MODULE "${NAME}" header_file_in  "${_hdr_in}")
     meta_set(MODULE "${NAME}" header_file_out "${_hdr_out}")

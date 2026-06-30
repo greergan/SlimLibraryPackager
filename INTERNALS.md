@@ -50,6 +50,7 @@ All module names must start with `Slim`. The suffix determines the module type:
 | `Slim<Word>` | Header-only library | `SlimValue` |
 | `SlimCommon<Lib>` | Sub-module (one word after `SlimCommon`) | `SlimCommonLog` |
 | `SlimCommon<Lib><Sub>` | Sub-module with nested header path | `SlimCommonHttpUrl` |
+| `SlimCommon<Lib><Sub>` | Sub-module with nested header path | `SlimCommonHttpUrlSearchParams` |
 
 Names that don't match one of these patterns are rejected at configure time with a `FATAL_ERROR`.
 

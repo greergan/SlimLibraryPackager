@@ -58,17 +58,18 @@ function(compile_targets)
     return()
   endif()
 
-  set(_src "${CMAKE_SOURCE_DIR}/src/main.cpp")
-  if(NOT EXISTS "${_src}")
-    message(FATAL_ERROR "setup_slim_library_targets: source not found '${_src}'")
+  file(GLOB _src_files "${CMAKE_SOURCE_DIR}/src/*.cpp")
+  if(NOT _src_files)
+    message(FATAL_ERROR "compile_targets: no .cpp sources found in '${CMAKE_SOURCE_DIR}/src/'")
   endif()
 
-  # Collect all sources: main.cpp + any extra sources
-  set(_all_sources "${_src}")
+  # Collect all sources: src/*.cpp + any extra sources
+  set(_all_sources ${_src_files})
   if(SLIM_COMMON_EXTRA_SOURCES)
     list(APPEND _all_sources ${SLIM_COMMON_EXTRA_SOURCES})
     message(STATUS "compile_targets: extra sources appended: ${SLIM_COMMON_EXTRA_SOURCES}")
   endif()
+  message(STATUS "compile_targets: sources: ${_all_sources}")
 
   string(REGEX REPLACE "^v" "" _version_stripped "${_version}")
   string(REGEX MATCH "^([0-9]+)" _ "${_version_stripped}")

@@ -43,7 +43,7 @@ The SlimCommon library is used by the [SlimTS](https://codeberg.org/greergan/Sli
 A project is defined by a set of files which are used to build, test and package the [SlimCommon](https://codeberg.org/greergan/SlimCommon) c++ library and its contained micro-libraries a long with a git repository structure. Also includes a .gitignore, LICENSE and [Forgejo](https://forgejo.org/) workflows. 
 
 ### File List  
-* `src/main.cpp`
+* `src/*.cpp`
 * `include/slim/common/[*]/[microlibrary].h.in`
 * `include/slim/common/[microlibrary]/*.h.in`
 * `src/test.cpp`
@@ -56,7 +56,7 @@ A project is defined by a set of files which are used to build, test and package
 
 | File | Purpose |
 | --- | --- |
-| `src/main.cpp` | contains library code |
+| `src/*.cpp` | contains library code |
 | `include/slim/common/[*]/[microlibrary].h.in` | i.e. [`SlimCommonHttpCookieStore`](https://codeberg.org/greergan/SlimCommonHttpCookieStore) uses `include/slim/common/Http/Cookie/store.h.in` |
 | `include/slim/common/[microlibrary]/*.h.in` - optional | i.e. [`SlimCommonHttp`](https://codeberg.org/greergan/SlimCommonHttp) uses `include/slim/common/http/*.h.in` |
 | `src/test.cpp` | optional, used to build small program that will test functionality |

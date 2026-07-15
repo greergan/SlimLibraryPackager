@@ -95,3 +95,6 @@ foreach(NAME IN LISTS MODULE_NAMES)
     message(STATUS "")
   endif()
 endforeach()
+
+message(STATUS "SLIM_EXTRA_CPP_FLAGS = ${SLIM_EXTRA_CPP_FLAGS}")
+message(STATUS "SLIM_EXTRA_LD_FLAGS  = ${SLIM_EXTRA_LD_FLAGS}")

@@ -53,13 +53,13 @@ slimcommon:
 		-DCMAKE_BUILD_TYPE=$(RELEASE_TYPE) \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_PREFIX) \
 		-DSLIM_USE_LOCAL_SOURCE=OFF \
-		-DSLIM_SHARED_ONLY=$(SHARED_ONLY) \
+		-DSLIM_SHARED_ONLY=OFF \
 		-DSLIM_GIT_URL=$(SLIM_GIT_URL) \
 		-DSLIM_GIT_REPO_OWNER=$(SLIM_GIT_REPO_OWNER)
 	$(CMAKE) --build $(BUILD_DIR)
 	cd $(BUILD_DIR) && cpack -G DEB
-	dpkg -l 'SlimCommon*' 2>/dev/null | awk '/^ii/{print $$2}' | xargs -r dpkg -r
-	PKG=$$(ls -1 dist/*.deb 2>/dev/null | sort -Vr | head -n 1); \
+	@dpkg -l 'SlimCommon*' 2>/dev/null | awk '/^ii/{print $$2}' | xargs -r dpkg -r 2>/dev/null
+	@PKG=$$(ls -1 dist/*.deb 2>/dev/null | sort -Vr | head -n 1); \
 	if [ -n "$$PKG" ]; then \
 		echo "Installing $$PKG"; \
 		dpkg -i "$$PKG"; \

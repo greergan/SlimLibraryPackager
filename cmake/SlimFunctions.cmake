@@ -1,6 +1,5 @@
 include(SlimCompilerFunctions)
 include(SlimExternalPackages)
 include(SlimModuleFunctions)
-include(SlimSourceFunctions)
 include(SlimTargetFunctions)
 include(SlimPackagingFunctions)

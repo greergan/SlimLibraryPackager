@@ -6,7 +6,6 @@ RELEASE_TYPE ?= DEBUG
 SHARED_ONLY ?= ON
 SLIM_GIT_URL ?= https://codeberg.org
 SLIM_GIT_REPO_OWNER ?= greergan
-
 NINJA := $(shell command -v ninja 2>/dev/null)
 ifdef NINJA
 CMAKE_GENERATOR := -G Ninja
@@ -14,7 +13,6 @@ else
 CMAKE_GENERATOR :=
 endif
 IS_REDHAT := $(shell test -f /etc/redhat-release && echo "yes")
-
 ARCH_RAW := $(shell uname -m)
 ifeq ($(ARCH_RAW),x86_64)
 	ARCH := x86_64
@@ -31,17 +29,14 @@ else ifeq ($(ARCH_RAW),armv7l)
 else
 	ARCH := unknown
 endif
-
 _THIS_DIR := $(notdir $(CURDIR))
 ifeq ($(_THIS_DIR),SlimCommon)
 .DEFAULT_GOAL := slimcommon
 else
 .DEFAULT_GOAL := build
 endif
-
 .PHONY: all configure build slimcommon install local test deb rpm packages clean
 all: $(.DEFAULT_GOAL)
-
 configure:
 	$(CMAKE) $(CMAKE_GENERATOR) -S . -B $(BUILD_DIR) \
 		-DCMAKE_BUILD_TYPE=$(RELEASE_TYPE) \
@@ -51,11 +46,8 @@ configure:
 		-DSLIM_SHARED_ONLY=$(SHARED_ONLY) \
 		-DSLIM_GIT_URL=$(SLIM_GIT_URL) \
 		-DSLIM_GIT_REPO_OWNER=$(SLIM_GIT_REPO_OWNER)
-
-
 build: configure
 	$(CMAKE) --build $(BUILD_DIR)
-
 slimcommon:
 	$(CMAKE) $(CMAKE_GENERATOR) -S . -B $(BUILD_DIR) \
 		-DCMAKE_BUILD_TYPE=$(RELEASE_TYPE) \
@@ -65,7 +57,16 @@ slimcommon:
 		-DSLIM_GIT_URL=$(SLIM_GIT_URL) \
 		-DSLIM_GIT_REPO_OWNER=$(SLIM_GIT_REPO_OWNER)
 	$(CMAKE) --build $(BUILD_DIR)
-
+	cd $(BUILD_DIR) && cpack -G DEB
+	dpkg -l 'SlimCommon*' 2>/dev/null | awk '/^ii/{print $$2}' | xargs -r dpkg -r
+	PKG=$$(ls -1 dist/*.deb 2>/dev/null | sort -Vr | head -n 1); \
+	if [ -n "$$PKG" ]; then \
+		echo "Installing $$PKG"; \
+		dpkg -i "$$PKG"; \
+	else \
+		echo "No .deb produced"; \
+		exit 1; \
+	fi
 install:
 	@if [ "$(IS_DEBIAN)" = "yes" ]; then \
 		$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF deb; \
@@ -91,7 +92,6 @@ install:
 		echo "Unsupported platform"; \
 		exit 1; \
 	fi;
-
 local:
 	@if [ "$(IS_DEBIAN)" = "yes" ]; then \
 		$(MAKE) LOCAL_SRC=ON SHARED_ONLY=OFF deb; \
@@ -117,13 +117,10 @@ local:
 		echo "Unsupported platform"; \
 		exit 1; \
 	fi;
-
 deb: build
-	cd $(BUILD_DIR) --target dist && cpack -G DEB
-
+	cd $(BUILD_DIR) && cpack -G DEB
 rpm: build
-	cd $(BUILD_DIR) --target dist && cpack -G RPM
-
+	cd $(BUILD_DIR) && cpack -G RPM
 packages:
 	@echo "Building packages"
 	$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF RELEASE_TYPE=RELEASE configure
@@ -132,7 +129,6 @@ packages:
 	cd $(BUILD_DIR) && cpack -G DEB
 	@echo "Packaging RPM"
 	cd $(BUILD_DIR) && cpack -G RPM
-
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -rf dist

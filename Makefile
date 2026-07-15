@@ -7,7 +7,12 @@ SHARED_ONLY ?= ON
 SLIM_GIT_URL ?= https://codeberg.org
 SLIM_GIT_REPO_OWNER ?= greergan
 
-IS_DEBIAN := $(shell test -f /etc/debian_version && echo "yes")
+NINJA := $(shell command -v ninja 2>/dev/null)
+ifdef NINJA
+CMAKE_GENERATOR := -G Ninja
+else
+CMAKE_GENERATOR :=
+endif
 IS_REDHAT := $(shell test -f /etc/redhat-release && echo "yes")
 
 ARCH_RAW := $(shell uname -m)
@@ -38,7 +43,7 @@ endif
 all: $(.DEFAULT_GOAL)
 
 configure:
-	$(CMAKE) -S . -B $(BUILD_DIR) \
+	$(CMAKE) $(CMAKE_GENERATOR) -S . -B $(BUILD_DIR) \
 		-DCMAKE_BUILD_TYPE=$(RELEASE_TYPE) \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_PREFIX) \
 		-DCPACK_OUTPUT_FILE_PREFIX=$(DIST_DIR) \
@@ -52,7 +57,7 @@ build: configure
 	$(CMAKE) --build $(BUILD_DIR)
 
 slimcommon:
-	$(CMAKE) -S . -B $(BUILD_DIR) \
+	$(CMAKE) $(CMAKE_GENERATOR) -S . -B $(BUILD_DIR) \
 		-DCMAKE_BUILD_TYPE=$(RELEASE_TYPE) \
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_PREFIX) \
 		-DSLIM_USE_LOCAL_SOURCE=OFF \

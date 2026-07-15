@@ -310,6 +310,9 @@ function(_set_module_headers NAME)
     # This check is optional: if the directory doesn't exist, or contains
     # no '*.h.in' files, it is silently skipped and header_file_in remains
     # as set above (and required, as before).
+    # NOTE: when the primary module is SlimCommon and SLIM_USE_LOCAL_SOURCE
+    # is OFF, sub-module sources are not yet fetched at this point.
+    # The extra header glob is deferred to _set_source_info in that case.
     set(_extra_hdr_in  "")
     set(_extra_hdr_out "")
     set(_extra_dir_full "${CMAKE_SOURCE_DIR}/${_extra_dir}")
@@ -424,6 +427,38 @@ function(_set_source_info NAME)
 
       string(TOLOWER "${NAME}" _lower)
       meta_set(MODULE "${NAME}" src_dir "${${_lower}_SOURCE_DIR}")
+
+      # Re-run extra header glob now that src_dir is known.
+      # _set_module_headers ran before fetch so could only glob CMAKE_SOURCE_DIR;
+      # for fetched sub-modules the headers live under their own src_dir.
+      _derive_module_type("${NAME}" _type)
+      if("${_type}" STREQUAL "SlimCommonOtherlibSublib")
+        meta_get(MODULE "${NAME}" include_dir   _inc_dir)
+        meta_get(MODULE "${NAME}" header_prefix _last_word)
+
+        set(_extra_dir      "${_inc_dir}/${_last_word}")
+        set(_extra_dir_full "${${_lower}_SOURCE_DIR}/${_extra_dir}")
+
+        if(EXISTS "${_extra_dir_full}")
+          file(GLOB _extra_hdr_matches RELATIVE "${${_lower}_SOURCE_DIR}" "${_extra_dir_full}/*.h.in")
+          list(SORT _extra_hdr_matches)
+
+          set(_extra_hdr_in  "")
+          set(_extra_hdr_out "")
+          foreach(_match IN LISTS _extra_hdr_matches)
+            string(REGEX REPLACE "\.in$" "" _match_out "${_match}")
+            list(APPEND _extra_hdr_in  "${_match}")
+            list(APPEND _extra_hdr_out "${_match_out}")
+          endforeach()
+
+          if(_extra_hdr_in)
+            meta_set(MODULE "${NAME}" extra_header_files_in  "${_extra_hdr_in}")
+            meta_set(MODULE "${NAME}" extra_header_files_out "${_extra_hdr_out}")
+            meta_set(MODULE "${NAME}" header_file_in_optional ON)
+            message(STATUS "_set_source_info: '${NAME}' found extra headers: ${_extra_hdr_in}")
+          endif()
+        endif()
+      endif()
     endif()
   endif()
 

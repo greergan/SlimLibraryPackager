@@ -27,7 +27,7 @@ else
 	ARCH := unknown
 endif
 
-.PHONY: all configure build install local test deb rpm packages clean
+.PHONY: all configure build slimcommon install local test deb rpm packages clean
 
 all: build
 
@@ -43,6 +43,16 @@ configure:
 
 
 build: configure
+	$(CMAKE) --build $(BUILD_DIR)
+
+slimcommon:
+	$(CMAKE) -S . -B $(BUILD_DIR) \
+		-DCMAKE_BUILD_TYPE=$(RELEASE_TYPE) \
+		-DCMAKE_INSTALL_PREFIX=$(INSTALL_PREFIX) \
+		-DSLIM_USE_LOCAL_SOURCE=OFF \
+		-DSLIM_SHARED_ONLY=$(SHARED_ONLY) \
+		-DSLIM_GIT_URL=$(SLIM_GIT_URL) \
+		-DSLIM_GIT_REPO_OWNER=$(SLIM_GIT_REPO_OWNER)
 	$(CMAKE) --build $(BUILD_DIR)
 
 install:

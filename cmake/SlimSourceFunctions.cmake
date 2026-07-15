@@ -64,13 +64,13 @@ function(generate_main_cpp)
 
         set(_hdr_in_content
 "#pragma once\n\
-#ifndef SLIM__COMMON__H\n\
-#define SLIM__COMMON__H\n\
-\n\
-${_includes_block}\n\
+#ifndef SLIM_COMMON_H\n\
+#define SLIM_COMMON_H\n\
 \n\
 #define ${_module}_VERSION \"@${_module}_VERSION@\"\n\
 #define ${_module}_GIT_HASH \"@${_module}_GIT_HASH@\"\n\
+\n\
+${_includes_block}
 \n\
 #endif // SLIM__COMMON__H\n")
 

@@ -217,7 +217,6 @@ endfunction()
 function(_set_dist_directory NAME)
   meta_get(MODULE "${NAME}" primary _is_primary)
   if(NOT _is_primary)
-    message(WARNING "_set_dist_directory: '${NAME}' is not a primary module")
     return()
   endif()
 

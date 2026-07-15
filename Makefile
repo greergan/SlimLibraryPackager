@@ -27,9 +27,15 @@ else
 	ARCH := unknown
 endif
 
-.PHONY: all configure build slimcommon install local test deb rpm packages clean
+_THIS_DIR := $(notdir $(CURDIR))
+ifeq ($(_THIS_DIR),SlimCommon)
+.DEFAULT_GOAL := slimcommon
+else
+.DEFAULT_GOAL := build
+endif
 
-all: build
+.PHONY: all configure build slimcommon install local test deb rpm packages clean
+all: $(.DEFAULT_GOAL)
 
 configure:
 	$(CMAKE) -S . -B $(BUILD_DIR) \

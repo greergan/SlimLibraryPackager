@@ -14,16 +14,14 @@ include(SlimFunctions)
 set_compiler_flags()
 load_slim_flags()
 define_module()
+configure_module_headers()
 make_install_artifacts()
 compile_targets()
 enable_testing()
 test_targets()
 test_catch2_targets()
 make_packages()
-include(CPack)  # MUST be at directory scope — make_packages() propagates all
-# CPACK_* vars via PARENT_SCOPE so they are visible here.
-# Calling include(CPack) inside a function() causes CPACK_GENERATOR
-# and CPACK_OUTPUT_FILE_PREFIX to be lost, producing empty packages.
+include(CPack)
 
 
 # do not remove this foreach

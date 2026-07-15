@@ -1,4 +1,113 @@
 # ---------------------------------------------------------------------------
+# configure_module_headers()
+# Stamps every sub-module header template into
+# ${CMAKE_CURRENT_BINARY_DIR}/include so the compiler can find them.
+# Must be called after define_module() and before compile_targets().
+# ---------------------------------------------------------------------------
+function(configure_module_headers)
+  get_primary_module(_primary)
+  if(NOT _primary)
+    message(FATAL_ERROR "configure_module_headers: no primary module defined")
+  endif()
+
+  foreach(_name IN LISTS MODULE_NAMES)
+    meta_get(MODULE "${_name}" primary               _is_primary)
+    meta_get(MODULE "${_name}" header_file_in        _hdr_in)
+    meta_get(MODULE "${_name}" header_file_out       _hdr_out)
+    meta_get(MODULE "${_name}" extra_header_files_in  _extra_hdr_in)
+    meta_get(MODULE "${_name}" extra_header_files_out _extra_hdr_out)
+    meta_get(MODULE "${_name}" git_tag               _git_tag)
+    meta_get(MODULE "${_name}" git_hash              _git_hash)
+    meta_get(MODULE "${_name}" upper                 _module)
+
+    if(NOT _hdr_in AND NOT _extra_hdr_in)
+      if(_is_primary)
+        continue()
+      else()
+        message(FATAL_ERROR "configure_module_headers: no headers defined for '${_name}'")
+      endif()
+    endif()
+
+    set(_skip_primary_header FALSE)
+    if(NOT _is_primary AND NOT "${_primary}" STREQUAL "SlimCommon")
+      set(_skip_primary_header TRUE)
+    endif()
+
+    if(_is_primary)
+      set(_module_root "${CMAKE_SOURCE_DIR}")
+    elseif(SLIM_USE_LOCAL_SOURCE)
+      set(_module_root "${CMAKE_SOURCE_DIR}")
+    else()
+      FetchContent_GetProperties("${_name}" SOURCE_DIR _module_root)
+      if(NOT _module_root)
+        message(FATAL_ERROR "configure_module_headers: FetchContent source dir not found for '${_name}'")
+      endif()
+    endif()
+
+    set(${_module}_VERSION  "${_git_tag}")
+    set(${_module}_GIT_HASH "${_git_hash}")
+
+    if(NOT _skip_primary_header)
+      # --- Single header --------------------------------------------------
+      set(_configured_single FALSE)
+      if(_hdr_in)
+        set(_hdr_in_path "${_module_root}/${_hdr_in}")
+        if(EXISTS "${_hdr_in_path}")
+          configure_file("${_hdr_in_path}" "${CMAKE_CURRENT_BINARY_DIR}/${_hdr_out}")
+          message(STATUS "configure_module_headers: configured '${_hdr_in_path}'")
+          set(_configured_single TRUE)
+        elseif(_is_primary)
+          message(STATUS "configure_module_headers: no header for primary, skipping: '${_hdr_in_path}'")
+          set(_configured_single TRUE)
+        endif()
+      endif()
+
+      # --- Extra headers --------------------------------------------------
+      # _extra_hdr_in may be empty when _set_module_headers globbed against
+      # CMAKE_SOURCE_DIR instead of the fetched sub-module root. Re-glob here
+      # from _module_root so configure_module_headers is self-sufficient.
+      if(NOT _extra_hdr_in AND NOT _is_primary AND _hdr_out)
+        cmake_path(GET _hdr_out STEM _hdr_stem)
+        cmake_path(GET _hdr_out PARENT_PATH _hdr_parent)
+        string(REGEX REPLACE "^include/" "" _hdr_parent_rel "${_hdr_parent}")
+        set(_extra_dir "${_module_root}/include/${_hdr_parent_rel}/${_hdr_stem}")
+        if(EXISTS "${_extra_dir}")
+          file(GLOB_RECURSE _extra_hdr_in  RELATIVE "${_module_root}" "${_extra_dir}/*.h.in")
+          foreach(_match IN LISTS _extra_hdr_in)
+            string(REGEX REPLACE "\.in$" "" _match_out "${_match}")
+            list(APPEND _extra_hdr_out "${_match_out}")
+          endforeach()
+          message(STATUS "configure_module_headers: re-globbed extra headers for '${_name}': ${_extra_hdr_in}")
+        endif()
+      endif()
+
+      if(_extra_hdr_in)
+        list(LENGTH _extra_hdr_in _extra_count)
+        math(EXPR _last "${_extra_count} - 1")
+        foreach(_idx RANGE ${_last})
+          list(GET _extra_hdr_in  ${_idx} _one_in)
+          list(GET _extra_hdr_out ${_idx} _one_out)
+          set(_one_in_path "${_module_root}/${_one_in}")
+          if(NOT EXISTS "${_one_in_path}")
+            message(FATAL_ERROR "configure_module_headers: extra header not found: '${_one_in_path}'")
+          endif()
+          configure_file("${_one_in_path}" "${CMAKE_CURRENT_BINARY_DIR}/${_one_out}")
+          message(STATUS "configure_module_headers: configured extra '${_one_in_path}'")
+        endforeach()
+        set(_configured_single TRUE)
+      endif()
+
+      if(NOT _configured_single AND NOT _is_primary)
+        message(FATAL_ERROR "configure_module_headers: no headers found for '${_name}' under '${_module_root}'")
+      endif()
+    endif()
+
+  endforeach()
+
+  message(STATUS "configure_module_headers: done")
+endfunction()
+
+# ---------------------------------------------------------------------------
 # make_install_artifacts()
 # Installs headers, export targets, CMake config/version files, and the
 # pkg-config metadata file derived from the primary module's metadata.
@@ -76,8 +185,8 @@ function(make_install_artifacts)
                     message(FATAL_ERROR "make_install_artifacts: no header_file_in defined for '${_name}'")
                 endif()
             elseif(NOT EXISTS "${_hdr_in_path}")
-                if(_hdr_in_optional)
-                    message(STATUS "make_install_artifacts: header_file_in not found, skipping (optional, extra headers present): '${_hdr_in_path}'")
+                if(_hdr_in_optional OR _is_primary)
+                    message(STATUS "make_install_artifacts: header_file_in not found, skipping: '${_hdr_in_path}'")
                 else()
                     message(FATAL_ERROR "make_install_artifacts: header_file_in not found: '${_hdr_in_path}'")
                 endif()

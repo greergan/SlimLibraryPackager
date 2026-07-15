@@ -60,7 +60,11 @@ function(compile_targets)
 
   file(GLOB _src_files "${CMAKE_SOURCE_DIR}/src/*.cpp")
   if(NOT _src_files)
-    message(FATAL_ERROR "compile_targets: no .cpp sources found in '${CMAKE_SOURCE_DIR}/src/'")
+    if(NOT SLIM_COMMON_EXTRA_SOURCES)
+      message(FATAL_ERROR "compile_targets: no .cpp sources found in '${CMAKE_SOURCE_DIR}/src/'")
+    else()
+      message(STATUS "compile_targets: no local src/*.cpp found, using sub-module sources only")
+    endif()
   endif()
 
   # Collect all sources: src/*.cpp + any extra sources
@@ -102,6 +106,11 @@ function(compile_targets)
                 $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
                 $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
         )
+
+    if(SLIM_COMMON_EXTRA_INCLUDE_DIRS)
+      target_include_directories(${_target} PRIVATE ${SLIM_COMMON_EXTRA_INCLUDE_DIRS})
+      message(STATUS "compile_targets: '${_target}' extra include dirs: ${SLIM_COMMON_EXTRA_INCLUDE_DIRS}")
+    endif()
     message(STATUS "Applying compile options to ${_target}")
     apply_slim_compile_options(${_target})
     target_compile_features(${_target} PUBLIC cxx_std_${SLIM_CXX_STANDARD})

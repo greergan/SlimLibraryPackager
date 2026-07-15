@@ -542,6 +542,25 @@ function(_set_source_info NAME)
         endforeach()
       endif()
 
+      # Glob sub-module src/*.cpp and accumulate into SLIM_COMMON_EXTRA_SOURCES
+      file(GLOB _sub_src_files "${${_lower}_SOURCE_DIR}/src/*.cpp")
+      list(FILTER _sub_src_files EXCLUDE REGEX ".*/src/test\\.cpp$")
+      if(_sub_src_files)
+        list(APPEND SLIM_COMMON_EXTRA_SOURCES ${_sub_src_files})
+        list(REMOVE_DUPLICATES SLIM_COMMON_EXTRA_SOURCES)
+        set(SLIM_COMMON_EXTRA_SOURCES "${SLIM_COMMON_EXTRA_SOURCES}" CACHE INTERNAL "")
+        message(STATUS "_set_source_info: '${NAME}' extra sources: ${_sub_src_files}")
+      endif()
+
+      # Accumulate sub-module include dir for compile-time use (not packaging)
+      set(_sub_inc_dir "${${_lower}_SOURCE_DIR}/include")
+      if(EXISTS "${_sub_inc_dir}")
+        list(APPEND SLIM_COMMON_EXTRA_INCLUDE_DIRS "${_sub_inc_dir}")
+        list(REMOVE_DUPLICATES SLIM_COMMON_EXTRA_INCLUDE_DIRS)
+        set(SLIM_COMMON_EXTRA_INCLUDE_DIRS "${SLIM_COMMON_EXTRA_INCLUDE_DIRS}" CACHE INTERNAL "")
+        message(STATUS "_set_source_info: '${NAME}' extra include dir: ${_sub_inc_dir}")
+      endif()
+
       # Re-run extra header glob now that src_dir is known.
       # _set_module_headers ran before fetch so could only glob CMAKE_SOURCE_DIR;
       # for fetched sub-modules the headers live under their own src_dir.

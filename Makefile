@@ -12,6 +12,7 @@ CMAKE_GENERATOR := -G Ninja
 else
 CMAKE_GENERATOR :=
 endif
+IS_DEBIAN := $(shell test -f /etc/debian_version && echo "yes")
 IS_REDHAT := $(shell test -f /etc/redhat-release && echo "yes")
 ARCH_RAW := $(shell uname -m)
 ifeq ($(ARCH_RAW),x86_64)

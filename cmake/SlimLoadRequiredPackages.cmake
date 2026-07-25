@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------
 # _load_required_packages(<FILE>)  [internal]
 # ---------------------------------------------------------------------------
-function(_load_required_packages FILE)
+macro(_load_required_packages FILE)
     if(NOT EXISTS "${FILE}")
         message(WARNING "_load_required_packages: file not found '${FILE}'")
         return()
@@ -35,4 +35,4 @@ function(_load_required_packages FILE)
             _propagate_module("${_pkg}")
         endif()
     endforeach()
-endfunction()
+endmacro()

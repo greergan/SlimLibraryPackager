@@ -166,6 +166,15 @@ function(_set_check_module NAME MIN_VERSION MAX_VERSION)
 
   meta_get(MODULE "${NAME}" lower _pkg_name)
 
+  # Unset all cached pkg_check_modules results to force a fresh check every run
+  unset("${NAME}_FOUND" CACHE)
+  unset("${NAME}_LIBRARIES" CACHE)
+  unset("${NAME}_INCLUDE_DIRS" CACHE)
+  unset("${NAME}_LIBRARY_DIRS" CACHE)
+  unset("${NAME}_LDFLAGS" CACHE)
+  unset("${NAME}_CFLAGS" CACHE)
+  unset("${NAME}_VERSION" CACHE)
+
   set(_constraints "")
   if(NOT "${MIN_VERSION}" STREQUAL "${_EMPTY_SENTINEL}" AND NOT "${MIN_VERSION}" STREQUAL "")
     list(APPEND _constraints "${_pkg_name}>=${MIN_VERSION}")
@@ -599,6 +608,87 @@ function(_set_source_info NAME)
 endfunction()
 
 # -------------------------------------------------------------------------------
+# _ensure_clean_package_state(<NAME>)
+# Prevents conflicts between a SlimCommon aggregate build and micro-library
+# builds by purging whichever set of packages would interfere:
+#
+#   - Micro-library build: purges 'slimcommon' if installed.
+#   - SlimCommon build:    reads required_packages and purges each listed
+#                          package if installed.
+#
+# Called in define_module() before _load_required_packages so the system
+# state is clean before any pkg_check_modules or dpkg installs run.
+# Fatal on any purge failure.
+# -------------------------------------------------------------------------------
+function(_ensure_clean_package_state NAME)
+  find_program(_DPKG_EXEC dpkg)
+  if(NOT _DPKG_EXEC)
+    message(FATAL_ERROR "_ensure_clean_package_state: dpkg not found")
+  endif()
+
+  _derive_module_type("${NAME}" _type)
+
+  if("${_type}" STREQUAL "SlimCommon")
+    # SlimCommon build: purge all micro-library packages listed in required_packages
+    set(_req_file "${CMAKE_SOURCE_DIR}/required_packages")
+    if(NOT EXISTS "${_req_file}")
+      return()
+    endif()
+
+    file(STRINGS "${_req_file}" _pkg_lines REGEX "^[^#\n]")
+    foreach(_line IN LISTS _pkg_lines)
+      string(STRIP "${_line}" _line)
+      if("${_line}" STREQUAL "")
+        continue()
+      endif()
+      string(REGEX MATCHALL "[^ \t]+" _tokens "${_line}")
+      list(GET _tokens 0 _pkg_name)
+      string(TOLOWER "${_pkg_name}" _pkg_lower)
+
+      execute_process(
+        COMMAND "${_DPKG_EXEC}" -l "${_pkg_lower}"
+        RESULT_VARIABLE _dpkg_query_result
+        OUTPUT_QUIET
+        ERROR_QUIET
+      )
+      if(_dpkg_query_result EQUAL 0)
+        message(STATUS "_ensure_clean_package_state: purging '${_pkg_lower}'")
+        execute_process(
+          COMMAND "${_DPKG_EXEC}" --purge "${_pkg_lower}"
+          RESULT_VARIABLE _dpkg_purge_result
+          ERROR_VARIABLE  _dpkg_purge_error
+        )
+        if(NOT _dpkg_purge_result EQUAL 0)
+          message(FATAL_ERROR "_ensure_clean_package_state: dpkg --purge failed for '${_pkg_lower}'\n${_dpkg_purge_error}")
+        endif()
+        message(STATUS "_ensure_clean_package_state: purged '${_pkg_lower}'")
+      endif()
+    endforeach()
+
+  else()
+    # Micro-library build: purge slimcommon if installed
+    execute_process(
+      COMMAND "${_DPKG_EXEC}" -l "slimcommon"
+      RESULT_VARIABLE _dpkg_query_result
+      OUTPUT_QUIET
+      ERROR_QUIET
+    )
+    if(_dpkg_query_result EQUAL 0)
+      message(STATUS "_ensure_clean_package_state: purging 'slimcommon'")
+      execute_process(
+        COMMAND "${_DPKG_EXEC}" --purge "slimcommon"
+        RESULT_VARIABLE _dpkg_purge_result
+        ERROR_VARIABLE  _dpkg_purge_error
+      )
+      if(NOT _dpkg_purge_result EQUAL 0)
+        message(FATAL_ERROR "_ensure_clean_package_state: dpkg --purge failed for 'slimcommon'\n${_dpkg_purge_error}")
+      endif()
+      message(STATUS "_ensure_clean_package_state: purged 'slimcommon'")
+    endif()
+  endif()
+endfunction()
+
+# -------------------------------------------------------------------------------
 # define_module([NAME] [min_version] [max_version] [ON])
 #   No args: derives name from CMAKE_SOURCE_DIR and auto-loads required_packages
 #            and external_dependencies.
@@ -611,6 +701,7 @@ function(define_module)
     cmake_path(GET CMAKE_SOURCE_DIR FILENAME NAME)
 
     define_module("${NAME}" "${_EMPTY_SENTINEL}" "${_EMPTY_SENTINEL}" ON)
+    _ensure_clean_package_state("${NAME}")
     _load_required_packages("${CMAKE_SOURCE_DIR}/required_packages")
     _load_external_dependencies("${CMAKE_SOURCE_DIR}/external_dependencies")
     _propagate_module("${NAME}")

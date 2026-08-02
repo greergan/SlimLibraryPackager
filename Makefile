@@ -206,18 +206,24 @@ ifeq ($(_THIS_DIR),SlimCommon)
 	fi; \
 	BUMP=""; \
 	CHANGELOG=""; \
+	TAB=$$(printf '\t'); \
+	NORMFILE=$$(mktemp); \
 	while IFS= read -r entry; do \
 		PKG=$$(echo "$$entry" | cut -d'|' -f1); \
 		MSG=$$(echo "$$entry" | cut -d'|' -f2-); \
 		CLEAN=$$(echo "$$MSG" | sed 's/^v[0-9][^:]*: //'); \
 		[ -z "$$(echo "$$CLEAN" | tr -d '[:space:]')" ] && continue; \
-		MAYBE_PREFIX=$$(echo "$$CLEAN" | cut -d':' -f1); \
-		if echo "$$CLEAN" | grep -q ':' && ! echo "$$MAYBE_PREFIX" | grep -q ' '; then \
+		echo "$$CLEAN" | sed -E 's/\b(feature|refactor|fix|docs|config|update):/\n\1:/g' | sed "s/^/$$PKG$${TAB}/" >> "$$NORMFILE"; \
+	done < "$$MSGFILE"; \
+	while IFS="$$TAB" read -r PKG SUBMSG; do \
+		[ -z "$$(echo "$$SUBMSG" | tr -d '[:space:]')" ] && continue; \
+		MAYBE_PREFIX=$$(echo "$$SUBMSG" | cut -d':' -f1); \
+		if echo "$$SUBMSG" | grep -q ':' && ! echo "$$MAYBE_PREFIX" | grep -q ' '; then \
 			PREFIX="$$MAYBE_PREFIX"; \
-			REST=$$(echo "$$CLEAN" | cut -d':' -f2- | sed 's/^ //'); \
+			REST=$$(echo "$$SUBMSG" | cut -d':' -f2- | sed 's/^ //'); \
 		else \
 			PREFIX=""; \
-			REST="$$CLEAN"; \
+			REST="$$SUBMSG"; \
 		fi; \
 		case "$$PREFIX" in \
 			feature|refactor) \
@@ -235,8 +241,11 @@ ifeq ($(_THIS_DIR),SlimCommon)
 				CHANGELOG="$${CHANGELOG}$${PREFIX}($${PKG}): $${REST}\n"; \
 				;; \
 		esac; \
-	done < "$$MSGFILE"; \
+	done < "$$NORMFILE"; \
+	rm -f "$$NORMFILE"; \
 	[ -z "$$BUMP" ] && BUMP="patch"; \
+	CHANGELOG=$$(printf '%b' "$$CHANGELOG" | awk '!seen[$$0]++'); \
+	CHANGELOG=$$(printf '%s\n' "$$CHANGELOG"); \
 	VERSION=$$(echo "$$LAST_TAG" | sed 's/^v//'); \
 	MAJOR=$$(echo "$$VERSION" | cut -d. -f1); \
 	MINOR=$$(echo "$$VERSION" | cut -d. -f2); \
@@ -248,48 +257,50 @@ ifeq ($(_THIS_DIR),SlimCommon)
 		PATCH=$$((PATCH + 1)); \
 	fi; \
 	NEW_TAG="v$$MAJOR.$$MINOR.$$PATCH"; \
+	if git rev-parse "$$NEW_TAG" >/dev/null 2>&1; then \
+		echo "version: tag $$NEW_TAG already exists"; \
+		rm -f "$$PKGFILE"; \
+		exit 0; \
+	fi; \
 	PKG_LINES=$$(awk -F'|' '{print $$2" "$$3}' "$$PKGFILE"); \
 	TAG_BODY="$$NEW_TAG\n$${CHANGELOG}\n$${PKG_LINES}"; \
 	printf '%b' "$$TAG_BODY" | git tag -a "$$NEW_TAG" -F -; \
 	echo "version: tagged $$NEW_TAG"; \
 	printf '%b\n' "$$TAG_BODY"; \
-	rm -f "$$MSGFILE" "$$PKGFILE"
+	rm -f "$$PKGFILE"
 else
 	@LAST_TAG=$$(git describe --tags --abbrev=0 2>/dev/null); \
 	if [ -z "$$LAST_TAG" ]; then \
 		echo "version: no tags found, create an initial tag manually"; \
 		exit 0; \
 	fi; \
-	COMMITS=$$(git log "$$LAST_TAG"..HEAD --oneline 2>/dev/null); \
-	if [ -z "$$COMMITS" ]; then \
+	TMPFILE=$$(mktemp); \
+	git log "$$LAST_TAG"..HEAD --format="%s" 2>/dev/null > "$$TMPFILE"; \
+	if [ ! -s "$$TMPFILE" ]; then \
 		echo "version: no commits since $$LAST_TAG"; \
+		rm -f "$$TMPFILE"; \
 		exit 0; \
 	fi; \
-	TMPFILE=$$(mktemp); \
-	printf '%s\n' "$$COMMITS" > "$$TMPFILE"; \
 	BUMP=""; \
-	BUMP_MSG=""; \
-	while IFS= read -r commit; do \
-		MSG=$$(echo "$$commit" | sed 's/^[0-9a-f]* //'); \
-		PREFIX=$$(echo "$$MSG" | cut -d':' -f1); \
+	NORMFILE=$$(mktemp); \
+	while IFS= read -r MSG || [ -n "$$MSG" ]; do \
+		echo "$$MSG" | sed -E 's/\b(feature|feat|refactor|fix|docs|config|chore|test|style|build|ci|perf):/\n\1:/g' >> "$$NORMFILE"; \
+	done < "$$TMPFILE"; \
+	while IFS= read -r SUBMSG || [ -n "$$SUBMSG" ]; do \
+		[ -z "$$(echo "$$SUBMSG" | tr -d '[:space:]')" ] && continue; \
+		PREFIX=$$(echo "$$SUBMSG" | cut -d':' -f1); \
 		case "$$PREFIX" in \
-			feature|refactor) \
-				if [ "$$BUMP" != "minor" ]; then \
-					BUMP="minor"; \
-					BUMP_MSG="$$MSG"; \
-				fi; \
+			feature|feat|refactor) \
+				[ "$$BUMP" != "minor" ] && BUMP="minor"; \
 				;; \
-			fix|docs) \
-				if [ -z "$$BUMP" ]; then \
-					BUMP="patch"; \
-					BUMP_MSG="$$MSG"; \
-				fi; \
+			fix|docs|config|chore|test|style|build|ci|perf) \
+				[ -z "$$BUMP" ] && BUMP="patch"; \
 				;; \
 		esac; \
-	done < "$$TMPFILE"; \
-	rm -f "$$TMPFILE"; \
+	done < "$$NORMFILE"; \
 	if [ -z "$$BUMP" ]; then \
 		echo "version: no version-bumping commits since $$LAST_TAG"; \
+		rm -f "$$TMPFILE" "$$NORMFILE"; \
 		exit 0; \
 	fi; \
 	VERSION=$$(echo "$$LAST_TAG" | sed 's/^v//'); \
@@ -303,10 +314,21 @@ else
 		PATCH=$$((PATCH + 1)); \
 	fi; \
 	NEW_TAG="v$$MAJOR.$$MINOR.$$PATCH"; \
-	TAG_BODY="$$NEW_TAG: $$BUMP_MSG"; \
-	git tag -a "$$NEW_TAG" -m "$$TAG_BODY"; \
+	if git rev-parse "$$NEW_TAG" >/dev/null 2>&1; then \
+		echo "version: tag $$NEW_TAG already exists"; \
+		rm -f "$$TMPFILE" "$$NORMFILE"; \
+		exit 0; \
+	fi; \
+	DEDUPFILE=$$(mktemp); \
+	awk '!seen[$$0]++' "$$NORMFILE" | sed '/^[[:space:]]*$$/d' > "$$DEDUPFILE"; \
+	MSGFILE=$$(mktemp); \
+	printf '%s\n' "$$NEW_TAG" > "$$MSGFILE"; \
+	cat "$$DEDUPFILE" >> "$$MSGFILE"; \
+	rm -f "$$TMPFILE" "$$NORMFILE" "$$DEDUPFILE"; \
+	git tag -a "$$NEW_TAG" -F "$$MSGFILE"; \
 	echo "version: tagged $$NEW_TAG"; \
-	echo "$$TAG_BODY"
+	cat "$$MSGFILE"; \
+	rm -f "$$MSGFILE"
 endif
 
 clean:

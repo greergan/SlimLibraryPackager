@@ -263,7 +263,7 @@ ifeq ($(_THIS_DIR),SlimCommon)
 		exit 0; \
 	fi; \
 	PKG_LINES=$$(awk -F'|' '{print $$2" "$$3}' "$$PKGFILE"); \
-	TAG_BODY="$$NEW_TAG\n$${CHANGELOG}\n$${PKG_LINES}"; \
+	TAG_BODY="$$NEW_TAG\n$${CHANGELOG}\n\n$${PKG_LINES}"; \
 	printf '%b' "$$TAG_BODY" | git tag -a "$$NEW_TAG" -F -; \
 	echo "version: tagged $$NEW_TAG"; \
 	printf '%b\n' "$$TAG_BODY"; \

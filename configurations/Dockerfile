@@ -3,8 +3,10 @@ FROM ubuntu:26.04
 # git running on local forgejo instance
 ENV SLIM_GIT_URL="http://forgejo"
 ENV SLIM_GIT_REPO_OWNER="greergan"
-ENV SLIM_PUBLISHER_USER="library-publisher-user forgejo setup step"
-ENV SLIM_PUBLISHER_TOKEN="key for publisher user"
+ENV SLIM_PUBLISHER_USER="highway-publisher"
+ENV SLIM_PUBLISHER_TOKEN="eaaabfa4bb2726880f462ec70b0d00e284773363"
+
+ENV TZ="America/Los_Angeles"
 
 ENV LANG="C.UTF-8"
 ENV LC_ALL="C.UTF-8"
@@ -32,4 +34,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         zip \
         unzip \
     && rm -rf /var/lib/apt/lists/*
-    
+RUN git config --global user.email "geergan@gmail.com" && \
+    git config --global user.name "Jeff Greer"
+

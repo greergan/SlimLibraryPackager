@@ -319,38 +319,62 @@ function(make_packages)
         set(_arch_name "unknown")
     endif()
 
-    # Forces /usr so installed paths inside the package are correct.
-    set(CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "" FORCE)
-
     # -----------------------------------------------------------------------
+    # Platform-specific packaging.
     # Propagate every CPACK_* variable to the parent (directory) scope.
     # include(CPack) must be called at directory scope by CMakeLists.txt
     # immediately after this function returns — variables set inside a
     # function() are invisible to include(CPack) if called here.
     # -----------------------------------------------------------------------
-    set(CPACK_GENERATOR                  "DEB;RPM"                                              PARENT_SCOPE)
-    set(CPACK_PACKAGE_NAME               "${_lower}"                                            PARENT_SCOPE)
-    set(CPACK_PACKAGE_VERSION            "${_sem_ver}"                                          PARENT_SCOPE)
-    set(CPACK_PACKAGE_CONTACT            "${GIT_USER_NAME} <${GIT_USER_EMAIL}>"                 PARENT_SCOPE)
-    set(CPACK_PACKAGE_FILE_NAME          "${_lower}-${_version}-${_arch_name}"                  PARENT_SCOPE)
-    set(CPACK_PACKAGING_INSTALL_PREFIX   "/usr"                                                 PARENT_SCOPE)
-    set(CPACK_OUTPUT_FILE_PREFIX         "${_dist_dir}"                                         PARENT_SCOPE)
-    set(CPACK_INSTALL_CMAKE_PROJECTS     "${CMAKE_BINARY_DIR};${PROJECT_NAME};ALL;/"            PARENT_SCOPE)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        # Windows: ZIP archive produced by clang-cl + xwin cross-compilation
+        set(CPACK_GENERATOR              "ZIP"                                              PARENT_SCOPE)
+        set(CPACK_PACKAGE_NAME           "${_lower}"                                        PARENT_SCOPE)
+        set(CPACK_PACKAGE_VERSION        "${_sem_ver}"                                      PARENT_SCOPE)
+        set(CPACK_PACKAGE_CONTACT        "${GIT_USER_NAME} <${GIT_USER_EMAIL}>"             PARENT_SCOPE)
+        set(CPACK_PACKAGE_FILE_NAME      "${_lower}-${_version}-windows-${_arch_name}"      PARENT_SCOPE)
+        set(CPACK_OUTPUT_FILE_PREFIX     "${_dist_dir}"                                     PARENT_SCOPE)
+        set(CPACK_INSTALL_CMAKE_PROJECTS "${CMAKE_BINARY_DIR};${PROJECT_NAME};ALL;/"        PARENT_SCOPE)
 
-    set(CPACK_DEBIAN_PACKAGE_MAINTAINER  "${GIT_USER_NAME}"                                    PARENT_SCOPE)
-    set(CPACK_DEBIAN_PACKAGE_SECTION     "devel"                                                PARENT_SCOPE)
-    set(CPACK_DEBIAN_PACKAGE_PRIORITY    "optional"                                             PARENT_SCOPE)
-    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${_arch_name}"                                       PARENT_SCOPE)
-    set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${_description}"                                      PARENT_SCOPE)
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        # macOS: ZIP archive produced by osxcross cross-compilation
+        set(CPACK_GENERATOR              "ZIP"                                              PARENT_SCOPE)
+        set(CPACK_PACKAGE_NAME           "${_lower}"                                        PARENT_SCOPE)
+        set(CPACK_PACKAGE_VERSION        "${_sem_ver}"                                      PARENT_SCOPE)
+        set(CPACK_PACKAGE_CONTACT        "${GIT_USER_NAME} <${GIT_USER_EMAIL}>"             PARENT_SCOPE)
+        set(CPACK_PACKAGE_FILE_NAME      "${_lower}-${_version}-macos-${_arch_name}"        PARENT_SCOPE)
+        set(CPACK_OUTPUT_FILE_PREFIX     "${_dist_dir}"                                     PARENT_SCOPE)
+        set(CPACK_INSTALL_CMAKE_PROJECTS "${CMAKE_BINARY_DIR};${PROJECT_NAME};ALL;/"        PARENT_SCOPE)
 
-    set(CPACK_RPM_PACKAGE_NAME           "${_lower}"                                            PARENT_SCOPE)
-    set(CPACK_RPM_PACKAGE_VERSION        "${_sem_ver}"                                          PARENT_SCOPE)
-    set(CPACK_RPM_PACKAGE_RELEASE        "1"                                                    PARENT_SCOPE)
-    set(CPACK_RPM_PACKAGE_LICENSE        "MIT"                                                  PARENT_SCOPE)
-    set(CPACK_RPM_PACKAGE_GROUP          "Development/Libraries"                                PARENT_SCOPE)
-    set(CPACK_RPM_PACKAGE_ARCHITECTURE   "${_arch_name}"                                        PARENT_SCOPE)
-    set(CPACK_RPM_PACKAGE_PREFIX         "/usr"                                                 PARENT_SCOPE)
-    set(CPACK_RPM_PACKAGE_SUMMARY        "${_description}"                                      PARENT_SCOPE)
+    else()
+        # Linux: DEB and RPM packages (original behavior unchanged)
+        # Forces /usr so installed paths inside the package are correct.
+        set(CMAKE_INSTALL_PREFIX "/usr" CACHE PATH "" FORCE)
+
+        set(CPACK_GENERATOR                  "DEB;RPM"                                              PARENT_SCOPE)
+        set(CPACK_PACKAGE_NAME               "${_lower}"                                            PARENT_SCOPE)
+        set(CPACK_PACKAGE_VERSION            "${_sem_ver}"                                          PARENT_SCOPE)
+        set(CPACK_PACKAGE_CONTACT            "${GIT_USER_NAME} <${GIT_USER_EMAIL}>"                 PARENT_SCOPE)
+        set(CPACK_PACKAGE_FILE_NAME          "${_lower}-${_version}-${_arch_name}"                  PARENT_SCOPE)
+        set(CPACK_PACKAGING_INSTALL_PREFIX   "/usr"                                                 PARENT_SCOPE)
+        set(CPACK_OUTPUT_FILE_PREFIX         "${_dist_dir}"                                         PARENT_SCOPE)
+        set(CPACK_INSTALL_CMAKE_PROJECTS     "${CMAKE_BINARY_DIR};${PROJECT_NAME};ALL;/"            PARENT_SCOPE)
+
+        set(CPACK_DEBIAN_PACKAGE_MAINTAINER  "${GIT_USER_NAME}"                                    PARENT_SCOPE)
+        set(CPACK_DEBIAN_PACKAGE_SECTION     "devel"                                                PARENT_SCOPE)
+        set(CPACK_DEBIAN_PACKAGE_PRIORITY    "optional"                                             PARENT_SCOPE)
+        set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "${_arch_name}"                                       PARENT_SCOPE)
+        set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${_description}"                                      PARENT_SCOPE)
+
+        set(CPACK_RPM_PACKAGE_NAME           "${_lower}"                                            PARENT_SCOPE)
+        set(CPACK_RPM_PACKAGE_VERSION        "${_sem_ver}"                                          PARENT_SCOPE)
+        set(CPACK_RPM_PACKAGE_RELEASE        "1"                                                    PARENT_SCOPE)
+        set(CPACK_RPM_PACKAGE_LICENSE        "MIT"                                                  PARENT_SCOPE)
+        set(CPACK_RPM_PACKAGE_GROUP          "Development/Libraries"                                PARENT_SCOPE)
+        set(CPACK_RPM_PACKAGE_ARCHITECTURE   "${_arch_name}"                                        PARENT_SCOPE)
+        set(CPACK_RPM_PACKAGE_PREFIX         "/usr"                                                 PARENT_SCOPE)
+        set(CPACK_RPM_PACKAGE_SUMMARY        "${_description}"                                      PARENT_SCOPE)
+    endif()
 
     # --- 'dist' target ---------------------------------------------------
     # CPack re-runs cmake_install.cmake internally into its own DESTDIR

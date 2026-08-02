@@ -55,7 +55,23 @@ endfunction()
 function(set_compiler_flags)
     set(flags "")
 
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    # Check frontend variant first: clang-cl reports CMAKE_CXX_COMPILER_ID=Clang
+    # but CMAKE_CXX_COMPILER_FRONTEND_VARIANT=MSVC and requires /W4 style flags.
+    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        list(APPEND flags
+            /W4
+            /WX-
+            /permissive-
+        )
+        if(CMAKE_BUILD_TYPE STREQUAL "RELEASE")
+            list(APPEND flags /O2 /DNDEBUG)
+        elseif(CMAKE_BUILD_TYPE STREQUAL "COMPACT")
+            list(APPEND flags /O1 /DNDEBUG)
+        elseif(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+            list(APPEND flags /Od /Zi)
+        endif()
+
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         list(APPEND flags
             -Wall
             -Wextra
@@ -70,20 +86,6 @@ function(set_compiler_flags)
             list(APPEND flags -O3)
         elseif(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
             list(APPEND flags -g -O0)
-        endif()
-
-    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-        list(APPEND flags
-            /W4
-            /WX-
-            /permissive-
-        )
-        if(CMAKE_BUILD_TYPE STREQUAL "RELEASE")
-            list(APPEND flags /O2 /DNDEBUG)
-        elseif(CMAKE_BUILD_TYPE STREQUAL "COMPACT")
-            list(APPEND flags /O1 /DNDEBUG)
-        elseif(CMAKE_BUILD_TYPE STREQUAL "DEBUG")
-            list(APPEND flags /Od /Zi)
         endif()
 
     else()

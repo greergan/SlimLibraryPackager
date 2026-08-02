@@ -7,6 +7,12 @@ SHARED_ONLY ?= ON
 ENABLE_LOGGING ?= OFF
 SLIM_GIT_URL ?= https://codeberg.org
 SLIM_GIT_REPO_OWNER ?= greergan
+TOOLCHAIN_FILE ?=
+ifdef TOOLCHAIN_FILE
+TOOLCHAIN_ARG := -DCMAKE_TOOLCHAIN_FILE=$(TOOLCHAIN_FILE)
+else
+TOOLCHAIN_ARG :=
+endif
 NINJA := $(shell command -v ninja 2>/dev/null)
 ifdef NINJA
 CMAKE_GENERATOR := -G Ninja
@@ -37,7 +43,7 @@ ifeq ($(_THIS_DIR),SlimCommon)
 else
 .DEFAULT_GOAL := build
 endif
-.PHONY: all configure build slimcommon install logging local local_logging test deb rpm packages clean version
+.PHONY: all configure build slimcommon install logging local local_logging test deb rpm packages clean version linux-x86_64 linux-arm64 windows macos-x86_64 macos-arm64
 all: $(.DEFAULT_GOAL)
 configure:
 	$(CMAKE) $(CMAKE_GENERATOR) -S . -B $(BUILD_DIR) \
@@ -48,7 +54,8 @@ configure:
 		-DSLIM_SHARED_ONLY=$(SHARED_ONLY) \
 		-DENABLE_LOGGING=$(ENABLE_LOGGING) \
 		-DSLIM_GIT_URL=$(SLIM_GIT_URL) \
-		-DSLIM_GIT_REPO_OWNER=$(SLIM_GIT_REPO_OWNER)
+		-DSLIM_GIT_REPO_OWNER=$(SLIM_GIT_REPO_OWNER) \
+		$(TOOLCHAIN_ARG)
 build: configure
 	$(CMAKE) --build $(BUILD_DIR)
 slimcommon:
@@ -384,6 +391,16 @@ else
 	rm -f "$$MSGFILE"
 endif
 
+linux-x86_64:
+	$(MAKE) TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchains/linux-x86_64.cmake build
+linux-arm64:
+	$(MAKE) TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchains/linux-arm64.cmake build
+windows:
+	$(MAKE) TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchains/windows-x86_64.cmake build
+macos-x86_64:
+	$(MAKE) TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchains/macos-x86_64.cmake build
+macos-arm64:
+	$(MAKE) TOOLCHAIN_FILE=$(CURDIR)/cmake/toolchains/macos-arm64.cmake build
 clean:
 	rm -rf $(BUILD_DIR)
 	rm -rf dist

@@ -1,6 +1,5 @@
 Makefile
 CMakeLists.txt
-cmake
 build
 dist
 

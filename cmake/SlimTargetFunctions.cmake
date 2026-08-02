@@ -184,9 +184,11 @@ function(test_targets)
       if("${_linkage}" STREQUAL "shared" AND NOT SLIM_USE_LOCAL_SOURCE AND NOT SLIM_SHARED_ONLY)
         target_link_libraries(${_target} PRIVATE ${_lower}_static)
       elseif("${_linkage}" STREQUAL "static")
-        if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC" OR CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+          # clang-cl and MSVC both use /MT for static CRT linkage
           target_link_options(${_target} PRIVATE /MT)
-        else()
+        elseif(NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+          # macOS does not support fully-static executables; skip on Darwin
           target_link_options(${_target} PRIVATE -static)
         endif()
       endif()

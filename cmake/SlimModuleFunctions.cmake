@@ -479,7 +479,16 @@ function(_set_source_info NAME)
       endif()
     endif()
   else()
-    if(NOT SLIM_USE_LOCAL_SOURCE)
+      # Only fetch sub-module source when building SlimCommon.
+      # Micro-library builds rely on _set_check_module / dpkg install instead.
+      get_primary_module(_primary_module)
+      _derive_module_type("${_primary_module}" _primary_type)
+      if(NOT "${_primary_type}" STREQUAL "SlimCommon")
+        _propagate_module("${NAME}")
+        return()
+      endif()
+
+      if(NOT SLIM_USE_LOCAL_SOURCE)
       meta_get(MODULE "${NAME}" git_repo       _repo_url)
       meta_get(MODULE "${NAME}" git_latest_tag _git_tag)
 

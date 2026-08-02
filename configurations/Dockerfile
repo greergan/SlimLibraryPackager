@@ -3,8 +3,8 @@ FROM ubuntu:26.04
 # git running on local forgejo instance
 ENV SLIM_GIT_URL="http://forgejo"
 ENV SLIM_GIT_REPO_OWNER="greergan"
-ENV SLIM_PUBLISHER_USER="highway-publisher"
-ENV SLIM_PUBLISHER_TOKEN="eaaabfa4bb2726880f462ec70b0d00e284773363"
+ENV SLIM_PUBLISHER_USER="forgejo-publisher-user"
+ENV SLIM_PUBLISHER_TOKEN="forgejo-publisher-user-token"
 
 ENV TZ="America/Los_Angeles"
 
@@ -21,9 +21,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         catch2 \
         cmake \
         curl \
+        gdb \
         git \
         golang-go \
+        iproute2 \
         libtool \
+        net-tools \
         ninja-build \
         nodejs \
         openssh-client \
@@ -31,9 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         pkg-config \
         python3 \
         rpm \
-        zip \
         unzip \
+        valgrind \
+        zip \
     && rm -rf /var/lib/apt/lists/*
-RUN git config --global user.email "geergan@gmail.com" && \
-    git config --global user.name "Jeff Greer"
-

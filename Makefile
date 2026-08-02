@@ -4,6 +4,7 @@ CMAKE := cmake
 LOCAL_SRC ?= ON
 RELEASE_TYPE ?= DEBUG
 SHARED_ONLY ?= ON
+ENABLE_LOGGING ?= OFF
 SLIM_GIT_URL ?= https://codeberg.org
 SLIM_GIT_REPO_OWNER ?= greergan
 NINJA := $(shell command -v ninja 2>/dev/null)
@@ -36,7 +37,7 @@ ifeq ($(_THIS_DIR),SlimCommon)
 else
 .DEFAULT_GOAL := build
 endif
-.PHONY: all configure build slimcommon install local test deb rpm packages clean version
+.PHONY: all configure build slimcommon install logging local local_logging test deb rpm packages clean version
 all: $(.DEFAULT_GOAL)
 configure:
 	$(CMAKE) $(CMAKE_GENERATOR) -S . -B $(BUILD_DIR) \
@@ -45,6 +46,7 @@ configure:
 		-DCPACK_OUTPUT_FILE_PREFIX=$(DIST_DIR) \
 		-DSLIM_USE_LOCAL_SOURCE=$(LOCAL_SRC) \
 		-DSLIM_SHARED_ONLY=$(SHARED_ONLY) \
+		-DENABLE_LOGGING=$(ENABLE_LOGGING) \
 		-DSLIM_GIT_URL=$(SLIM_GIT_URL) \
 		-DSLIM_GIT_REPO_OWNER=$(SLIM_GIT_REPO_OWNER)
 build: configure
@@ -55,6 +57,7 @@ slimcommon:
 		-DCMAKE_INSTALL_PREFIX=$(INSTALL_PREFIX) \
 		-DSLIM_USE_LOCAL_SOURCE=OFF \
 		-DSLIM_SHARED_ONLY=OFF \
+		-DENABLE_LOGGING=$(ENABLE_LOGGING) \
 		-DSLIM_GIT_URL=$(SLIM_GIT_URL) \
 		-DSLIM_GIT_REPO_OWNER=$(SLIM_GIT_REPO_OWNER)
 	$(CMAKE) --build $(BUILD_DIR)
@@ -70,7 +73,7 @@ slimcommon:
 	fi
 install:
 	@if [ "$(IS_DEBIAN)" = "yes" ]; then \
-		$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF deb; \
+		$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF ENABLE_LOGGING=OFF deb; \
 		PKG=$$(ls -1 dist/*.deb 2>/dev/null | sort -Vr | head -n 1); \
 		if [ -n "$$PKG" ]; then \
 			echo "Installing $$PKG"; \
@@ -80,7 +83,32 @@ install:
 			exit 1; \
 		fi; \
 	elif [ "$(IS_REDHAT)" = "yes" ]; then \
-		$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF rpm; \
+		$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF ENABLE_LOGGING=OFF rpm; \
+		PKG=$$(ls -1 dist/*.rpm 2>/dev/null | sort -Vr | head -n 1); \
+		if [ -n "$$PKG" ]; then \
+			echo "Installing $$PKG"; \
+			rpm -i "$$PKG"; \
+		else \
+			echo "No .rpm produced"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "Unsupported platform"; \
+		exit 1; \
+	fi;
+logging:
+	@if [ "$(IS_DEBIAN)" = "yes" ]; then \
+		$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF ENABLE_LOGGING=ON deb; \
+		PKG=$$(ls -1 dist/*.deb 2>/dev/null | sort -Vr | head -n 1); \
+		if [ -n "$$PKG" ]; then \
+			echo "Installing $$PKG"; \
+			dpkg -i "$$PKG"; \
+		else \
+			echo "No .deb produced"; \
+			exit 1; \
+		fi; \
+	elif [ "$(IS_REDHAT)" = "yes" ]; then \
+		$(MAKE) LOCAL_SRC=OFF SHARED_ONLY=OFF ENABLE_LOGGING=ON rpm; \
 		PKG=$$(ls -1 dist/*.rpm 2>/dev/null | sort -Vr | head -n 1); \
 		if [ -n "$$PKG" ]; then \
 			echo "Installing $$PKG"; \
@@ -106,6 +134,31 @@ local:
 		fi; \
 	elif [ "$(IS_REDHAT)" = "yes" ]; then \
 		$(MAKE) LOCAL_SRC=ON SHARED_ONLY=OFF rpm; \
+		PKG=$$(ls -1 dist/*0.0.0*.rpm 2>/dev/null | sort -Vr | head -n 1); \
+		if [ -n "$$PKG" ]; then \
+			echo "Installing $$PKG"; \
+			rpm -i "$$PKG"; \
+		else \
+			echo "No .rpm produced"; \
+			exit 1; \
+		fi; \
+	else \
+		echo "Unsupported platform"; \
+		exit 1; \
+	fi;
+local_logging:
+	@if [ "$(IS_DEBIAN)" = "yes" ]; then \
+		$(MAKE) LOCAL_SRC=ON SHARED_ONLY=OFF ENABLE_LOGGING=ON deb; \
+		PKG=$$(ls -1 dist/*0.0.0*.deb 2>/dev/null | sort -Vr | head -n 1); \
+		if [ -n "$$PKG" ]; then \
+			echo "Installing $$PKG"; \
+			dpkg -i "$$PKG"; \
+		else \
+			echo "No .deb produced"; \
+			exit 1; \
+		fi; \
+	elif [ "$(IS_REDHAT)" = "yes" ]; then \
+		$(MAKE) LOCAL_SRC=ON SHARED_ONLY=OFF ENABLE_LOGGING=ON rpm; \
 		PKG=$$(ls -1 dist/*0.0.0*.rpm 2>/dev/null | sort -Vr | head -n 1); \
 		if [ -n "$$PKG" ]; then \
 			echo "Installing $$PKG"; \

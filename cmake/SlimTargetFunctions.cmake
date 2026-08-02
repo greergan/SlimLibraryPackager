@@ -5,9 +5,15 @@ function(apply_slim_compile_options TARGET)
   else()
     message(WARNING "apply_slim_compile_options: '${TARGET}' already has COMPILE_OPTIONS set, skipping base flags")
   endif()
+
   if(SLIM_EXTRA_CPP_FLAGS)
     target_compile_options(${TARGET} PRIVATE ${SLIM_EXTRA_CPP_FLAGS})
   endif()
+
+  if(ENABLE_LOGGING)
+    target_compile_definitions(${TARGET} PRIVATE ENABLE_LOGGING)
+  endif()
+
   if(SLIM_EXTRA_LD_FLAGS)
     set(_link_libs "")
     set(_link_opts "")
@@ -31,11 +37,12 @@ function(apply_slim_compile_options TARGET)
     endif()
     if(_link_dirs)
       set_property(TARGET ${TARGET} APPEND PROPERTY
-    INSTALL_RPATH "${_link_dirs}")
+        INSTALL_RPATH "${_link_dirs}")
       set_property(TARGET ${TARGET} PROPERTY
-    BUILD_RPATH "${_link_dirs}")
+        BUILD_RPATH "${_link_dirs}")
     endif()
   endif()
+
   apply_module_flags(${TARGET})
 endfunction()
 
@@ -222,6 +229,7 @@ function(test_catch2_targets)
   message(STATUS "test_catch2_targets: enabled")
 
   file(GLOB_RECURSE _test_sources "${_tests_dir}/*.cpp")
+  message(STATUS "test_catch2_targets: test sources: ${_test_sources}")
 
   if(NOT _hpp_only)
     message(STATUS "test_catch2_targets: library target properties before compilation:")

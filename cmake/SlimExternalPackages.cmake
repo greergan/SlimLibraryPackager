@@ -108,6 +108,25 @@ function(_load_external_dependencies FILE)
 
     message(STATUS "_load_external_dependencies: resolved '${_pkg}' to version '${_best_version}'")
 
+    # --- Check if latest version is already installed -------------------
+    find_program(_PKG_CONFIG_EXEC pkg-config)
+    if(_PKG_CONFIG_EXEC)
+      execute_process(
+              COMMAND "${_PKG_CONFIG_EXEC}" --modversion "${_pkg}"
+              OUTPUT_VARIABLE _installed_version
+              OUTPUT_STRIP_TRAILING_WHITESPACE
+              RESULT_VARIABLE _pkg_config_result
+              ERROR_QUIET
+          )
+      if(_pkg_config_result EQUAL 0 AND NOT "${_installed_version}" STREQUAL "")
+        if(NOT "${_best_version}" VERSION_GREATER "${_installed_version}")
+          message(STATUS "_load_external_dependencies: '${_pkg}' ${_installed_version} is current, skipping install")
+          continue()
+        endif()
+        message(STATUS "_load_external_dependencies: '${_pkg}' ${_installed_version} installed, ${_best_version} available, upgrading")
+      endif()
+    endif()
+
     # --- Download and install ----------------------------------------
     set(_filename "${_pkg}-${_best_version}-${_arch_name}.deb")
     set(_url "${SLIM_GIT_URL}/api/packages/${SLIM_GIT_REPO_OWNER}/generic/${_pkg}/${_best_version}/${_filename}")

@@ -2,9 +2,9 @@
 # _load_required_packages(<FILE>)  [internal]
 # ---------------------------------------------------------------------------
 macro(_load_required_packages FILE)
-    if(NOT EXISTS "${FILE}")
-        message(WARNING "_load_required_packages: file not found '${FILE}'")
-        return()
+  message(STATUS "_load_required_packages ${NAME} primary: ${MODULE_${NAME}_primary}")
+    if(EXISTS "${FILE}")
+        #return()
     endif()
     message(STATUS "_load_required_packages: processing file '${FILE}'")
 

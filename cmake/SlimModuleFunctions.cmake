@@ -185,14 +185,17 @@ function(_set_check_module NAME MIN_VERSION MAX_VERSION)
 
   if(_constraints)
     pkg_check_modules("${NAME}" ${_constraints})
+    meta_get(MODULE "${NAME}" git_latest_tag   GIT_LATEST_TAG)
+    message(STATUS "_set_check_module: ${NAME} => found=${${NAME}_VERSION} latest=${GIT_LATEST_TAG}")
   else()
     pkg_check_modules("${NAME}" "${_pkg_name}")
+    meta_get(MODULE "${NAME}" git_latest_tag   GIT_LATEST_TAG)
+    message(STATUS "_set_check_module: ${NAME} => found=${${NAME}_VERSION} latest=${GIT_LATEST_TAG}")
   endif()
 
   if(NOT ${NAME}_FOUND)
     message(STATUS "_set_check_module: '${_pkg_name}' not found, installing from package registry")
     _install_module_package("${NAME}")
-
     if(_constraints)
       pkg_check_modules("${NAME}" REQUIRED ${_constraints})
     else()

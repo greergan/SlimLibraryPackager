@@ -117,5 +117,6 @@ function(_set_git_repo_latest_tag NAME)
 
   string(REGEX MATCH "refs/tags/([^\n^]+)" _ "${_tag_output}")
   meta_set(MODULE "${NAME}" git_latest_tag "${CMAKE_MATCH_1}")
+  message(STATUS "_set_git_repo_latest_tag: git_latest_tag=${CMAKE_MATCH_1}")
   _propagate_module("${NAME}")
 endfunction()

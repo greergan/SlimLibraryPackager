@@ -66,6 +66,8 @@ function(compile_targets)
   endif()
 
   file(GLOB _src_files "${CMAKE_SOURCE_DIR}/src/*.cpp")
+  list(FILTER _src_files EXCLUDE REGEX "test\\.cpp$")
+
   if(NOT _src_files)
     if(NOT SLIM_COMMON_EXTRA_SOURCES)
       message(FATAL_ERROR "compile_targets: no .cpp sources found in '${CMAKE_SOURCE_DIR}/src/'")

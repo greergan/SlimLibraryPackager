@@ -228,9 +228,16 @@ function(test_catch2_targets)
     message(STATUS "test_catch2_targets: disabled (no tests directory found)")
     return()
   endif()
-  message(STATUS "test_catch2_targets: enabled")
 
   file(GLOB_RECURSE _test_sources "${_tests_dir}/*.cpp")
+
+  # Check if the GLOB found any files
+  if(NOT _test_sources)
+    message(STATUS "test_catch2_targets: disabled (no test sources found in ${_tests_dir})")
+    return()
+  endif()
+
+  message(STATUS "test_catch2_targets: enabled")
   message(STATUS "test_catch2_targets: test sources: ${_test_sources}")
 
   if(NOT _hpp_only)
@@ -238,6 +245,7 @@ function(test_catch2_targets)
     dump_target_properties(${_lower}_shared)
     dump_target_properties(${_lower}_static)
   endif()
+
   find_package(Catch2 3 REQUIRED)
   enable_testing()
 
